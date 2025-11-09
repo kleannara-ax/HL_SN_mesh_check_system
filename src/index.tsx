@@ -284,6 +284,20 @@ const Home = () => (
                 </div>
               </div>
               <div class="rounded-xl border border-slate-200 bg-white/50 p-5">
+                <h3 class="text-sm font-semibold text-slate-900">결과 내보내기</h3>
+                <p class="mt-2 text-xs text-slate-600">
+                  분석된 점들만 투명 배경에 표시한 이미지를 다운로드할 수 있습니다.
+                </p>
+                <button
+                  id="downloadOverlayButton"
+                  type="button"
+                  class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-sky-500 px-3 py-2 text-xs font-semibold text-sky-700 transition hover:bg-sky-50 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400"
+                  disabled
+                >
+                  점 위치 이미지 다운로드
+                </button>
+              </div>
+              <div class="rounded-xl border border-slate-200 bg-white/50 p-5">
                 <div class="flex items-center justify-between">
                   <h3 class="text-sm font-semibold text-slate-900">검사 이력</h3>
                   <a

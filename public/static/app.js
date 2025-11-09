@@ -134,6 +134,7 @@ const setActionButtons = ({ analyze, reset, edit, undo, save }) => {
   }
   if (elements.undoButton) elements.undoButton.disabled = !undo
   if (elements.saveInspection) elements.saveInspection.disabled = !save
+  if (elements.downloadOverlayButton) elements.downloadOverlayButton.disabled = !save
   updateOverlayInteraction()
 }
 
@@ -234,6 +235,7 @@ const registerElements = () => {
   elements.stopCameraButton = document.getElementById('stopCameraButton')
   elements.roiSelectButton = document.getElementById('roiSelectButton')
   elements.roiClearButton = document.getElementById('roiClearButton')
+  elements.downloadOverlayButton = document.getElementById('downloadOverlayButton')
 }
 
 const updateStats = () => {
@@ -1131,6 +1133,94 @@ const classifyComponents = (components, width, height, thresholds) => {
   return { holes, hexMask, areaThreshold }
 }
 
+const downloadOverlayImage = () => {
+  if (!state.results || !state.results.length) {
+    log('다운로드할 분석 결과가 없습니다.', 'warning')
+    return
+  }
+
+  const { meshCanvas } = elements
+  if (!meshCanvas) {
+    log('캔버스를 찾을 수 없습니다.', 'error')
+    return
+  }
+
+  const width = meshCanvas.width
+  const height = meshCanvas.height
+  if (!width || !height) {
+    log('유효한 캔버스 크기가 없습니다.', 'error')
+    return
+  }
+
+  log('투명 배경 오버레이 이미지를 생성하는 중...')
+
+  // Create temporary canvas for transparent overlay
+  const overlayCanvas = document.createElement('canvas')
+  overlayCanvas.width = width
+  overlayCanvas.height = height
+  const ctx = overlayCanvas.getContext('2d')
+  if (!ctx) {
+    log('오버레이 캔버스 컨텍스트를 생성하지 못했습니다.', 'error')
+    return
+  }
+
+  // Clear canvas (transparent background)
+  ctx.clearRect(0, 0, width, height)
+
+  // Draw regular holes (cleaned = blue, blocked = pink)
+  ctx.save()
+  ctx.lineWidth = 2
+  ;(state.results ?? []).forEach((hole) => {
+    ctx.beginPath()
+    if (hole.status === 'cleaned') {
+      ctx.strokeStyle = 'rgba(56, 189, 248, 1.0)'  // Sky blue
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.6)'
+    } else {
+      ctx.strokeStyle = 'rgba(244, 114, 182, 1.0)'  // Pink
+      ctx.fillStyle = 'rgba(244, 114, 182, 0.6)'
+    }
+    ctx.arc(hole.x, hole.y, hole.radius * 0.9, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.stroke()
+  })
+
+  // Draw virtual holes (purple dashed circles)
+  ;(state.virtualHoles ?? []).forEach((vhole) => {
+    ctx.beginPath()
+    ctx.strokeStyle = 'rgba(147, 51, 234, 1.0)'  // Purple
+    ctx.fillStyle = 'rgba(147, 51, 234, 0.5)'
+    ctx.setLineDash([4, 4])  // Dashed border
+    ctx.lineWidth = 2
+    ctx.arc(vhole.x, vhole.y, vhole.radius * 0.8, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.stroke()
+    ctx.setLineDash([])  // Reset dash
+  })
+
+  ctx.restore()
+
+  // Convert to blob and trigger download
+  overlayCanvas.toBlob((blob) => {
+    if (!blob) {
+      log('이미지 변환에 실패했습니다.', 'error')
+      return
+    }
+
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    const title = state.title || '청소검사'
+    const timestamp = formatTimestampLabel().replace(/:/g, '-').replace(/\s/g, '_')
+    a.href = url
+    a.download = `${title}_overlay_${timestamp}.png`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+
+    log(`투명 배경 오버레이 이미지를 다운로드했습니다: ${a.download}`, 'info')
+  }, 'image/png')
+}
+
 const detectVirtualHoles = (holes, width, height) => {
   if (!holes || holes.length < 10) return []
 
@@ -1593,6 +1683,10 @@ const setupEventListeners = () => {
 
     log(`"${title}" 검사 결과 저장 API 연동은 다음 단계에서 구현됩니다.`)
     console.info('Inspection payload preview', payload)
+  })
+
+  elements.downloadOverlayButton?.addEventListener('click', () => {
+    downloadOverlayImage()
   })
 }
 
