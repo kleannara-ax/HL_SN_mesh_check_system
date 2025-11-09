@@ -297,11 +297,11 @@ const recalculateMetrics = () => {
   const canvasArea = canvas ? canvas.width * canvas.height : 0
   const roiArea = state.roi ? state.roi.width * state.roi.height : canvasArea
   
-  const inspectionArea = roiArea - hexPixels
+  const inspectionArea = roiArea - missedPixels
   
   const cleanedArea = cleanedAreaHoles
   const blockedArea = blockedAreaHoles
-  const totalArea = inspectionArea
+  const totalArea = roiArea
   const totalCount = holes.length
   
   const cleaningRateCount = totalCount ? (cleanedCount / totalCount) * 100 : 0
