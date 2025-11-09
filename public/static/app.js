@@ -293,17 +293,24 @@ const recalculateMetrics = () => {
   const missedPixels = countMaskPixels(state.missedMask)
   const hexPixels = countMaskPixels(state.hexMask)
   
+  const canvas = elements.meshCanvas
+  const canvasArea = canvas ? canvas.width * canvas.height : 0
+  const roiArea = state.roi ? state.roi.width * state.roi.height : canvasArea
+  
+  const inspectionArea = roiArea - hexPixels
+  
   const cleanedArea = cleanedAreaHoles
   const blockedArea = blockedAreaHoles
-  const totalArea = cleanedArea + blockedArea
+  const totalArea = inspectionArea
   const totalCount = holes.length
   
   const cleaningRateCount = totalCount ? (cleanedCount / totalCount) * 100 : 0
-  const cleaningRateArea = totalArea ? (cleanedArea / totalArea) * 100 : 0
+  const cleaningRateArea = inspectionArea > 0 ? (cleanedArea / inspectionArea) * 100 : 0
   
   console.log('[Metrics Debug]', {
     cleanedCount, blockedCount, totalCount,
-    cleanedAreaHoles, blockedAreaHoles, missedPixels,
+    cleanedAreaHoles, blockedAreaHoles, missedPixels, hexPixels,
+    canvasArea, roiArea, inspectionArea,
     cleanedArea, blockedArea, totalArea,
     cleaningRateCount: cleaningRateCount.toFixed(1),
     cleaningRateArea: cleaningRateArea.toFixed(1)
