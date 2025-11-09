@@ -315,6 +315,12 @@ const recalculateMetrics = () => {
     cleaningRateCount: cleaningRateCount.toFixed(1),
     cleaningRateArea: cleaningRateArea.toFixed(1)
   })
+  
+  console.log(`[청소율 계산 공식]`)
+  console.log(`청소율 = (청소 완료 면적) / (총 검사 면적 - 미분류 후보 면적) × 100`)
+  console.log(`청소율 = ${cleanedArea.toLocaleString('ko-KR')} / (${roiArea.toLocaleString('ko-KR')} - ${missedPixels.toLocaleString('ko-KR')}) × 100`)
+  console.log(`청소율 = ${cleanedArea.toLocaleString('ko-KR')} / ${inspectionArea.toLocaleString('ko-KR')} × 100`)
+  console.log(`청소율 = ${cleaningRateArea.toFixed(1)}%`)
 
   state.metrics = {
     totalCount,
@@ -1214,6 +1220,16 @@ const analyzeMesh = async () => {
     updateStats()
     setActionButtons({ analyze: true, reset: true, edit: !!holes.length, undo: false, save: !!holes.length })
 
+    const metrics = state.metrics
+    if (metrics && metrics.totalArea > 0) {
+      const cleanedArea = metrics.cleanedArea.toLocaleString('ko-KR')
+      const totalArea = metrics.totalArea.toLocaleString('ko-KR')
+      const missedArea = metrics.missedArea.toLocaleString('ko-KR')
+      const inspectionArea = (metrics.totalArea - metrics.missedArea).toLocaleString('ko-KR')
+      const rate = metrics.cleaningRateArea.toFixed(1)
+      log(`📊 청소율 계산: ${cleanedArea} / (${totalArea} - ${missedArea}) × 100 = ${cleanedArea} / ${inspectionArea} × 100 = ${rate}%`, 'info')
+    }
+    
     log('분석이 완료되었습니다. 필요 시 수동 교정을 진행하세요.')
   } catch (error) {
     console.error(error)
