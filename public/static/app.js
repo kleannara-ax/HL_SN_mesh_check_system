@@ -1,0 +1,1502 @@
+const defaultMetrics = () => ({
+  totalCount: 0,
+  cleanedCount: 0,
+  blockedCount: 0,
+  cleaningRateCount: 0,
+  totalArea: 0,
+  cleanedArea: 0,
+  blockedArea: 0,
+  missedArea: 0,
+  cleaningRateArea: 0
+})
+
+const state = {
+  image: null,
+  imageBitmap: null,
+  results: null,
+  hexMask: null,
+  candidateMask: null,
+  missedMask: null,
+  title: '',
+  cameraStream: null,
+  editMode: false,
+  manualEdits: [],
+  lastObjectUrl: null,
+  thresholds: {
+    dark: 80,
+    gray: 145,
+    areaPercentile: 50
+  },
+  metrics: defaultMetrics(),
+  isAnalyzing: false,
+  pendingReanalysis: false,
+  roi: null,
+  selectingROI: false,
+  selectionStart: null,
+  selectionPreview: null
+}
+
+const elements = {}
+
+const updateOverlayInteraction = () => {
+  const overlay = elements.overlayCanvas
+  if (!overlay) return
+
+  if (state.selectingROI) {
+    overlay.style.cursor = 'crosshair'
+  } else if (state.editMode) {
+    overlay.style.cursor = 'pointer'
+  } else {
+    overlay.style.cursor = 'default'
+  }
+}
+
+const applyCanvasLayout = (width, height) => {
+  const { canvasWrapper, meshCanvas, overlayCanvas } = elements
+  if (!meshCanvas) return
+
+  if (canvasWrapper) {
+    canvasWrapper.style.aspectRatio = `${width} / ${height}`
+  }
+
+  meshCanvas.width = width
+  meshCanvas.height = height
+  meshCanvas.style.width = '100%'
+  meshCanvas.style.height = '100%'
+
+  if (overlayCanvas) {
+    overlayCanvas.width = width
+    overlayCanvas.height = height
+    overlayCanvas.style.width = '100%'
+    overlayCanvas.style.height = '100%'
+  }
+}
+
+const resetCanvasLayout = () => {
+  const { canvasWrapper, meshCanvas, overlayCanvas } = elements
+  if (canvasWrapper) {
+    canvasWrapper.style.removeProperty('aspect-ratio')
+  }
+  if (meshCanvas) {
+    meshCanvas.width = 0
+    meshCanvas.height = 0
+    meshCanvas.style.removeProperty('width')
+    meshCanvas.style.removeProperty('height')
+  }
+  if (overlayCanvas) {
+    overlayCanvas.width = 0
+    overlayCanvas.height = 0
+    overlayCanvas.style.removeProperty('width')
+    overlayCanvas.style.removeProperty('height')
+  }
+}
+
+const log = (message, level = 'info') => {
+  if (!elements.logPanel) return
+  const timestamp = new Date().toLocaleTimeString('ko-KR', { hour12: false })
+  const line = document.createElement('div')
+  line.className = `flex items-start gap-2 ${level === 'error' ? 'text-rose-300' : level === 'warning' ? 'text-amber-300' : 'text-slate-300'}`
+  line.innerHTML = `<span class="text-slate-500">${timestamp}</span><span>${message}</span>`
+  elements.logPanel.prepend(line)
+}
+
+const updateThresholdLabels = () => {
+  if (elements.thresholdDark && elements.thresholdDarkValue) {
+    const value = Number(elements.thresholdDark.value)
+    elements.thresholdDarkValue.textContent = value.toString()
+    state.thresholds.dark = value
+  }
+  if (elements.thresholdGray && elements.thresholdGrayValue) {
+    const value = Number(elements.thresholdGray.value)
+    elements.thresholdGrayValue.textContent = value.toString()
+    state.thresholds.gray = value
+  }
+  if (elements.thresholdArea && elements.thresholdAreaValue) {
+    const value = Number(elements.thresholdArea.value)
+    const topShare = Math.max(0, 100 - value)
+    elements.thresholdAreaValue.textContent = `상위 ${topShare}% (P${value})`
+    state.thresholds.areaPercentile = value
+  }
+}
+
+const setActionButtons = ({ analyze, reset, edit, undo, save }) => {
+  if (elements.analyzeButton) elements.analyzeButton.disabled = !analyze
+  if (elements.resetButton) elements.resetButton.disabled = !reset
+  if (elements.toggleEditMode) {
+    elements.toggleEditMode.disabled = !edit
+    if (!edit) {
+      elements.toggleEditMode.textContent = '편집 모드 전환'
+      if (state.editMode) {
+        state.editMode = false
+      }
+    }
+  }
+  if (elements.undoButton) elements.undoButton.disabled = !undo
+  if (elements.saveInspection) elements.saveInspection.disabled = !save
+  updateOverlayInteraction()
+}
+
+const resetStats = () => {
+  state.metrics = defaultMetrics()
+  if (elements.totalHoles) elements.totalHoles.textContent = '0'
+  if (elements.cleanedCount) elements.cleanedCount.textContent = '0'
+  if (elements.blockedCount) elements.blockedCount.textContent = '0'
+  if (elements.totalArea) elements.totalArea.textContent = '0'
+  if (elements.cleanedArea) elements.cleanedArea.textContent = '0'
+  if (elements.blockedArea) elements.blockedArea.textContent = '0'
+  if (elements.missedArea) elements.missedArea.textContent = '0'
+  if (elements.cleaningRate) elements.cleaningRate.textContent = '0%'
+  if (elements.countCleaningRate) elements.countCleaningRate.textContent = '0%'
+}
+
+const clearOverlay = () => {
+  const { overlayCanvas } = elements
+  if (!overlayCanvas) return
+  const ctx = overlayCanvas.getContext('2d')
+  ctx?.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height)
+}
+
+const resetCanvas = () => {
+  const { meshCanvas, overlayCanvas, canvasPlaceholder } = elements
+  if (meshCanvas && meshCanvas.getContext) {
+    const ctx = meshCanvas.getContext('2d')
+    ctx?.clearRect(0, 0, meshCanvas.width || meshCanvas.clientWidth, meshCanvas.height || meshCanvas.clientHeight)
+  }
+  if (overlayCanvas) {
+    clearOverlay()
+  }
+  resetCanvasLayout()
+  if (canvasPlaceholder) {
+    canvasPlaceholder.classList.remove('hidden')
+  }
+}
+
+const resetWorkspace = () => {
+  state.image = null
+  state.imageBitmap = null
+  state.results = null
+  state.hexMask = null
+  state.candidateMask = null
+  state.missedMask = null
+  state.editMode = false
+  state.manualEdits = []
+  state.isAnalyzing = false
+  state.pendingReanalysis = false
+  if (state.lastObjectUrl) {
+    URL.revokeObjectURL(state.lastObjectUrl)
+    state.lastObjectUrl = null
+  }
+  clearInspectionTitle()
+  clearROI(true)
+  stopCameraStream()
+  if (elements.imageInput) {
+    elements.imageInput.value = ''
+  }
+  resetCanvas()
+  resetStats()
+  setActionButtons({ analyze: false, reset: false, edit: false, undo: false, save: false })
+  log('작업 공간을 초기화했습니다.')
+}
+
+const registerElements = () => {
+  elements.canvasWrapper = document.getElementById('canvasWrapper')
+  elements.imageInput = document.getElementById('imageInput')
+  elements.analyzeButton = document.getElementById('analyzeButton')
+  elements.resetButton = document.getElementById('resetButton')
+  elements.thresholdDark = document.getElementById('thresholdDark')
+  elements.thresholdDarkValue = document.getElementById('thresholdDarkValue')
+  elements.thresholdGray = document.getElementById('thresholdGray')
+  elements.thresholdGrayValue = document.getElementById('thresholdGrayValue')
+  elements.thresholdArea = document.getElementById('thresholdArea')
+  elements.thresholdAreaValue = document.getElementById('thresholdAreaValue')
+  elements.logPanel = document.getElementById('logPanel')
+  elements.meshCanvas = document.getElementById('meshCanvas')
+  elements.overlayCanvas = document.getElementById('overlayCanvas')
+  elements.canvasPlaceholder = document.getElementById('canvasPlaceholder')
+  elements.totalHoles = document.getElementById('totalHoles')
+  elements.cleanedCount = document.getElementById('cleanedCount')
+  elements.blockedCount = document.getElementById('blockedCount')
+  elements.totalArea = document.getElementById('totalArea')
+  elements.cleanedArea = document.getElementById('cleanedArea')
+  elements.blockedArea = document.getElementById('blockedArea')
+  elements.missedArea = document.getElementById('missedArea')
+  elements.cleaningRate = document.getElementById('cleaningRate')
+  elements.countCleaningRate = document.getElementById('countCleaningRate')
+  elements.toggleEditMode = document.getElementById('toggleEditMode')
+  elements.undoButton = document.getElementById('undoButton')
+  elements.saveInspection = document.getElementById('saveInspection')
+  elements.titleInput = document.getElementById('inspectionTitle')
+  elements.cameraContainer = document.getElementById('cameraContainer')
+  elements.cameraPreview = document.getElementById('cameraPreview')
+  elements.startCameraButton = document.getElementById('startCameraButton')
+  elements.captureCameraButton = document.getElementById('captureCameraButton')
+  elements.stopCameraButton = document.getElementById('stopCameraButton')
+  elements.roiSelectButton = document.getElementById('roiSelectButton')
+  elements.roiClearButton = document.getElementById('roiClearButton')
+}
+
+const updateStats = () => {
+  const metrics = state.metrics ?? defaultMetrics()
+  const {
+    totalCount,
+    cleanedCount,
+    blockedCount,
+    totalArea,
+    cleanedArea,
+    blockedArea,
+    missedArea,
+    cleaningRateArea,
+    cleaningRateCount
+  } = metrics
+
+  if (elements.totalHoles) elements.totalHoles.textContent = totalCount.toLocaleString('ko-KR')
+  if (elements.cleanedCount) elements.cleanedCount.textContent = cleanedCount.toLocaleString('ko-KR')
+  if (elements.blockedCount) elements.blockedCount.textContent = blockedCount.toLocaleString('ko-KR')
+  if (elements.totalArea) elements.totalArea.textContent = totalArea.toLocaleString('ko-KR')
+  if (elements.cleanedArea) elements.cleanedArea.textContent = cleanedArea.toLocaleString('ko-KR')
+  if (elements.blockedArea) elements.blockedArea.textContent = blockedArea.toLocaleString('ko-KR')
+  if (elements.missedArea) elements.missedArea.textContent = missedArea.toLocaleString('ko-KR')
+  if (elements.cleaningRate) elements.cleaningRate.textContent = `${cleaningRateArea.toFixed(1)}%`
+  if (elements.countCleaningRate) elements.countCleaningRate.textContent = `${cleaningRateCount.toFixed(1)}%`
+}
+
+const countMaskPixels = (mask) => {
+  if (!mask || !mask.length) return 0
+  let count = 0
+  for (let i = 0; i < mask.length; i++) {
+    if (mask[i]) count++
+  }
+  return count
+}
+
+const recalculateMetrics = () => {
+  const holes = state.results ?? []
+  let cleanedCount = 0
+  let blockedCount = 0
+  let cleanedAreaHoles = 0
+  let blockedAreaHoles = 0
+
+  for (const hole of holes) {
+    const area = Number.isFinite(hole.area) ? hole.area : 0
+    if (hole.status === 'cleaned') {
+      cleanedCount++
+      cleanedAreaHoles += area
+    } else if (hole.status === 'blocked') {
+      blockedCount++
+      blockedAreaHoles += area
+    } else {
+      blockedAreaHoles += area
+      blockedCount++
+    }
+  }
+
+  const missedPixels = countMaskPixels(state.missedMask)
+  const hexPixels = countMaskPixels(state.hexMask)
+  
+  const cleanedArea = cleanedAreaHoles
+  const blockedArea = blockedAreaHoles + missedPixels
+  const totalArea = cleanedArea + blockedArea
+  const totalCount = holes.length
+  
+  const cleaningRateCount = totalCount ? (cleanedCount / totalCount) * 100 : 0
+  const cleaningRateArea = totalArea ? (cleanedArea / totalArea) * 100 : 0
+
+  state.metrics = {
+    totalCount,
+    cleanedCount,
+    blockedCount,
+    cleaningRateCount,
+    totalArea,
+    cleanedArea,
+    blockedArea,
+    missedArea: missedPixels,
+    cleaningRateArea
+  }
+}
+
+const formatTimestampLabel = (date = new Date()) => {
+  return date
+    .toLocaleString('ko-KR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    })
+    .replace(/\./g, '-')
+    .replace('- ', ' ')
+}
+
+const applyInspectionTitle = (title) => {
+  state.title = title
+  if (elements.titleInput) {
+    elements.titleInput.value = title
+  }
+}
+
+const ensureInspectionTitle = () => {
+  if (state.title && state.title.trim().length > 0) return state.title
+  const fallback = `청소 검사 ${formatTimestampLabel()}`
+  applyInspectionTitle(fallback)
+  return fallback
+}
+
+const clearInspectionTitle = () => {
+  state.title = ''
+  if (elements.titleInput) {
+    elements.titleInput.value = ''
+  }
+}
+
+const updateROIControls = () => {
+  if (elements.roiSelectButton) {
+    const hasImage = !!state.imageBitmap
+    elements.roiSelectButton.disabled = !hasImage
+    elements.roiSelectButton.textContent = state.selectingROI
+      ? '영역 지정 중...'
+      : state.roi
+        ? '영역 다시 지정'
+        : '검사 영역 지정'
+  }
+  if (elements.roiClearButton) {
+    elements.roiClearButton.disabled = !state.roi
+  }
+  updateOverlayInteraction()
+}
+
+const clearROI = (silent = false) => {
+  state.roi = null
+  state.selectingROI = false
+  state.selectionStart = null
+  state.selectionPreview = null
+  updateROIControls()
+  if (!silent) {
+    log('검사 영역을 초기화했습니다. 전체 영역을 대상으로 분석합니다.', 'info')
+  }
+  if (elements.overlayCanvas) {
+    renderOverlay()
+  }
+  if (!silent && state.imageBitmap) {
+    if (state.results && state.results.length) {
+      if (state.isAnalyzing) {
+        state.pendingReanalysis = true
+        log('현재 진행 중인 분석이 완료되면 전체 영역 기준으로 자동 재분석합니다.', 'info')
+      } else {
+        log('전체 영역 기준 재분석을 실행합니다.', 'info')
+        analyzeMesh()
+      }
+    }
+  }
+}
+
+const getCanvasPoint = (event) => {
+  const canvas = elements.overlayCanvas
+  if (!canvas) return null
+  const rect = canvas.getBoundingClientRect()
+  const scaleX = canvas.width / rect.width
+  const scaleY = canvas.height / rect.height
+  const x = Math.min(Math.max(0, (event.clientX - rect.left) * scaleX), canvas.width)
+  const y = Math.min(Math.max(0, (event.clientY - rect.top) * scaleY), canvas.height)
+  return { x, y }
+}
+
+const normalizeRect = (start, end) => {
+  const x = Math.min(start.x, end.x)
+  const y = Math.min(start.y, end.y)
+  const width = Math.abs(end.x - start.x)
+  const height = Math.abs(end.y - start.y)
+  return { x, y, width, height }
+}
+
+const beginROISelection = () => {
+  if (!state.imageBitmap) {
+    log('먼저 분석할 이미지를 불러와 주세요.', 'warning')
+    return
+  }
+  state.selectingROI = true
+  state.selectionStart = null
+  state.selectionPreview = null
+  state.editMode = false
+  if (elements.toggleEditMode) {
+    elements.toggleEditMode.textContent = '편집 모드 전환'
+  }
+  updateROIControls()
+  renderOverlay()
+  log('🎯 영역 지정 모드 활성화: 캔버스에서 드래그하여 검사 영역을 선택하세요.', 'info')
+}
+
+const finalizeROISelection = () => {
+  if (!state.selectionStart || !state.selectionPreview) {
+    state.selectingROI = false
+    updateROIControls()
+    return
+  }
+  const preview = state.selectionPreview
+  if (preview.width < 10 || preview.height < 10) {
+    log('선택 영역이 너무 작습니다. 더 넓은 영역을 드래그해 주세요.', 'warning')
+    state.selectionPreview = null
+    state.selectionStart = null
+    state.selectingROI = false
+    updateROIControls()
+    renderOverlay()
+    return
+  }
+  state.roi = { ...preview }
+  state.selectionPreview = null
+  state.selectionStart = null
+  state.selectingROI = false
+  updateROIControls()
+  
+  const roiAreaPx = Math.round(state.roi.width * state.roi.height)
+  log(
+    `✅ 검사 영역 설정 완료: ${Math.round(state.roi.width)}×${Math.round(state.roi.height)}px (면적: ${roiAreaPx.toLocaleString('ko-KR')}px²)`,
+    'info'
+  )
+  renderOverlay()
+  if (state.results && state.results.length) {
+    if (state.isAnalyzing) {
+      state.pendingReanalysis = true
+      log('ROI가 업데이트되어 현재 분석 종료 후 자동으로 다시 실행됩니다.', 'info')
+    } else {
+      log('선택된 영역 기준으로 재분석을 실행합니다.', 'info')
+      analyzeMesh()
+    }
+  } else {
+    log('선택된 영역을 기준으로 분석을 실행하려면 “분석 시작” 버튼을 눌러 주세요.', 'warning')
+  }
+}
+
+const cancelROISelection = () => {
+  state.selectingROI = false
+  state.selectionStart = null
+  state.selectionPreview = null
+  updateROIControls()
+  renderOverlay()
+  log('영역 지정이 취소되었습니다.', 'info')
+}
+
+const updateROISelectionPreview = (current) => {
+  if (!state.selectionStart) return
+  const rect = normalizeRect(state.selectionStart, current)
+  state.selectionPreview = rect
+  
+  const { overlayCanvas } = elements
+  if (!overlayCanvas) return
+  const ctx = overlayCanvas.getContext('2d')
+  if (!ctx) return
+  
+  renderOverlay()
+}
+
+const handleOverlayPointerDown = (event) => {
+  if (!state.selectingROI) return
+  event.preventDefault()
+  event.stopPropagation()
+  const point = getCanvasPoint(event)
+  if (!point) return
+  state.selectionStart = point
+  state.selectionPreview = { x: point.x, y: point.y, width: 0, height: 0 }
+  renderOverlay()
+}
+
+const handleOverlayPointerMove = (event) => {
+  if (!state.selectingROI || !state.selectionStart) return
+  event.preventDefault()
+  event.stopPropagation()
+  const point = getCanvasPoint(event)
+  if (!point) return
+  updateROISelectionPreview(point)
+}
+
+const handleOverlayPointerUp = (event) => {
+  if (!state.selectingROI || !state.selectionStart) return
+  event.preventDefault()
+  event.stopPropagation()
+  const point = getCanvasPoint(event)
+  if (point) {
+    updateROISelectionPreview(point)
+  }
+  finalizeROISelection()
+}
+
+const handleOverlayPointerLeave = (event) => {
+  if (!state.selectingROI || !state.selectionStart) return
+  event.preventDefault()
+  event.stopPropagation()
+}
+
+const updateCameraControls = (active) => {
+  if (elements.startCameraButton) elements.startCameraButton.disabled = active
+  if (elements.captureCameraButton) elements.captureCameraButton.disabled = !active
+  if (elements.stopCameraButton) elements.stopCameraButton.disabled = !active
+  if (elements.cameraContainer) elements.cameraContainer.classList.toggle('hidden', !active)
+}
+
+const stopCameraStream = () => {
+  if (state.cameraStream) {
+    state.cameraStream.getTracks().forEach((track) => track.stop())
+    state.cameraStream = null
+  }
+  if (elements.cameraPreview) {
+    elements.cameraPreview.pause?.()
+    elements.cameraPreview.srcObject = null
+  }
+  updateCameraControls(false)
+}
+
+const startCameraStream = async () => {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    log('해당 기기에서는 카메라 촬영을 지원하지 않습니다.', 'error')
+    return
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+    state.cameraStream = stream
+    if (elements.cameraPreview) {
+      elements.cameraPreview.srcObject = stream
+      await elements.cameraPreview.play()
+    }
+    updateCameraControls(true)
+    log('카메라 미리보기를 시작했습니다. 프레임이 안정된 후 “촬영”을 눌러 주세요.')
+  } catch (error) {
+    console.error(error)
+    updateCameraControls(false)
+    log('카메라 접근이 거부되었거나 사용할 수 없습니다.', 'error')
+  }
+}
+
+const captureCameraFrame = async () => {
+  if (!elements.cameraPreview || !state.cameraStream) {
+    log('카메라가 활성화되어 있지 않습니다.', 'error')
+    return
+  }
+  const video = elements.cameraPreview
+  if (!video.videoWidth || !video.videoHeight) {
+    log('카메라 프레임을 불러오지 못했습니다. 잠시 후 다시 시도하세요.', 'error')
+    return
+  }
+
+  const canvas = document.createElement('canvas')
+  canvas.width = video.videoWidth
+  canvas.height = video.videoHeight
+  const ctx = canvas.getContext('2d')
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.95))
+  if (!blob) {
+    log('카메라 캡처에 실패했습니다.', 'error')
+    return
+  }
+
+  const timestamp = Date.now()
+  const fileName = `camera-capture-${timestamp}.jpg`
+  const file = new File([blob], fileName, { type: 'image/jpeg', lastModified: timestamp })
+
+  ensureInspectionTitle()
+  await loadImageToCanvas(file, 'camera')
+  log('카메라 촬영 이미지를 캔버스에 불러왔습니다.')
+}
+
+const drawMaskLayers = () => {
+  const { overlayCanvas } = elements
+  if (!overlayCanvas) return
+  const ctx = overlayCanvas.getContext('2d')
+  if (!ctx) return
+
+  const width = overlayCanvas.width
+  const height = overlayCanvas.height
+  if (!width || !height) return
+
+  const totalPixels = width * height
+  const { hexMask, missedMask, results } = state
+
+  const coverMask = new Uint8Array(totalPixels)
+  if (hexMask && hexMask.length === totalPixels) {
+    coverMask.set(hexMask)
+  }
+
+  const imageData = ctx.createImageData(width, height)
+  const data = imageData.data
+
+  if (hexMask && hexMask.length === totalPixels) {
+    for (let i = 0; i < totalPixels; i++) {
+      if (hexMask[i] > 0) {
+        const idx = i * 4
+        data[idx] = Math.max(data[idx], 24)
+        data[idx + 1] = Math.max(data[idx + 1], 180)
+        data[idx + 2] = Math.max(data[idx + 2], 92)
+        data[idx + 3] = Math.max(data[idx + 3], 110)
+        coverMask[i] = 1
+      }
+    }
+  }
+
+  if (missedMask && missedMask.length === totalPixels) {
+    for (let i = 0; i < totalPixels; i++) {
+      if (missedMask[i] > 0) {
+        const idx = i * 4
+        data[idx] = 48
+        data[idx + 1] = 255
+        data[idx + 2] = 128
+        data[idx + 3] = 200
+        coverMask[i] = 1
+      }
+    }
+  }
+
+  if (results && results.length) {
+    for (const hole of results) {
+      const centerX = hole.x
+      const centerY = hole.y
+      const radius = Math.max(2, hole.radius * 1.15)
+      const radiusSquared = radius * radius
+      const minX = Math.max(0, Math.floor(centerX - radius))
+      const maxX = Math.min(width - 1, Math.ceil(centerX + radius))
+      const minY = Math.max(0, Math.floor(centerY - radius))
+      const maxY = Math.min(height - 1, Math.ceil(centerY + radius))
+
+      for (let y = minY; y <= maxY; y++) {
+        const dy = y - centerY
+        const rowOffset = y * width
+        const dySquared = dy * dy
+        for (let x = minX; x <= maxX; x++) {
+          const dx = x - centerX
+          if (dx * dx + dySquared <= radiusSquared) {
+            coverMask[rowOffset + x] = 1
+          }
+        }
+      }
+    }
+  }
+
+  const pinkAlpha = 45
+  for (let i = 0; i < totalPixels; i++) {
+    if (!coverMask[i]) {
+      const idx = i * 4
+      data[idx] = Math.max(data[idx], 255)
+      data[idx + 1] = Math.max(data[idx + 1], 105)
+      data[idx + 2] = Math.max(data[idx + 2], 180)
+      data[idx + 3] = Math.max(data[idx + 3], pinkAlpha)
+    }
+  }
+
+  ctx.putImageData(imageData, 0, 0)
+  drawROIHighlight(ctx)
+}
+
+const drawROIHighlight = (ctx) => {
+  const roi = state.roi
+  const preview = state.selectionPreview
+
+  ctx.save()
+  
+  if (roi && !state.selectingROI) {
+    ctx.fillStyle = 'rgba(14, 165, 233, 0.08)'
+    ctx.strokeStyle = 'rgba(14, 165, 233, 0.95)'
+    ctx.lineWidth = 3
+    ctx.setLineDash([])
+    ctx.fillRect(roi.x, roi.y, roi.width, roi.height)
+    ctx.strokeRect(roi.x + 1.5, roi.y + 1.5, roi.width - 3, roi.height - 3)
+    
+    ctx.fillStyle = 'rgba(14, 165, 233, 0.9)'
+    ctx.font = 'bold 14px system-ui, sans-serif'
+    ctx.textBaseline = 'top'
+    const label = `ROI: ${Math.round(roi.width)}×${Math.round(roi.height)}px`
+    const metrics = ctx.measureText(label)
+    const padding = 6
+    const labelX = roi.x + 4
+    const labelY = roi.y + 4
+    ctx.fillRect(labelX, labelY, metrics.width + padding * 2, 20)
+    ctx.fillStyle = 'white'
+    ctx.fillText(label, labelX + padding, labelY + 4)
+  }
+  
+  if (preview && state.selectingROI) {
+    ctx.setLineDash([8, 4])
+    ctx.fillStyle = 'rgba(244, 114, 182, 0.15)'
+    ctx.strokeStyle = 'rgba(244, 114, 182, 1.0)'
+    ctx.lineWidth = 2
+    ctx.fillRect(preview.x, preview.y, preview.width, preview.height)
+    ctx.strokeRect(preview.x + 1, preview.y + 1, preview.width - 2, preview.height - 2)
+    
+    if (preview.width > 40 && preview.height > 30) {
+      ctx.fillStyle = 'rgba(244, 114, 182, 0.95)'
+      ctx.font = 'bold 13px system-ui, sans-serif'
+      ctx.textBaseline = 'top'
+      const label = `${Math.round(preview.width)}×${Math.round(preview.height)}px`
+      const metrics = ctx.measureText(label)
+      const padding = 5
+      const labelX = preview.x + preview.width / 2 - metrics.width / 2 - padding
+      const labelY = preview.y + preview.height / 2 - 10
+      ctx.fillRect(labelX, labelY, metrics.width + padding * 2, 20)
+      ctx.fillStyle = 'white'
+      ctx.fillText(label, labelX + padding, labelY + 4)
+    }
+  }
+  
+  ctx.restore()
+}
+
+const drawHoleOverlay = () => {
+  const { overlayCanvas } = elements
+  if (!overlayCanvas) return
+  const ctx = overlayCanvas.getContext('2d')
+  if (!ctx) return
+
+  ctx.save()
+  ctx.lineWidth = 1
+  ctx.globalCompositeOperation = 'source-over'
+
+  ;(state.results ?? []).forEach((hole) => {
+    ctx.beginPath()
+    ctx.strokeStyle = hole.status === 'cleaned' ? 'rgba(125, 211, 252, 0.8)' : 'rgba(244, 114, 182, 0.8)'
+    ctx.fillStyle = hole.status === 'cleaned' ? 'rgba(56, 189, 248, 0.45)' : 'rgba(244, 114, 182, 0.35)'
+    ctx.arc(hole.x, hole.y, hole.radius * 0.9, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.stroke()
+  })
+
+  ctx.restore()
+}
+
+const renderOverlay = () => {
+  const { overlayCanvas, meshCanvas } = elements
+  if (!overlayCanvas || !meshCanvas) return
+  const ctx = overlayCanvas.getContext('2d')
+  if (!ctx) return
+
+  const width = overlayCanvas.width
+  const height = overlayCanvas.height
+
+  if (!width || !height) {
+    ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height)
+    return
+  }
+
+  if (state.candidateMask && state.candidateMask.length === width * height) {
+    state.missedMask = buildMissedMask(state.candidateMask, state.results, width, height)
+  } else {
+    state.missedMask = null
+  }
+
+  ctx.clearRect(0, 0, width, height)
+  drawMaskLayers()
+  drawHoleOverlay()
+}
+
+const computeGrayscale = (data) => {
+  const gray = new Uint8Array(data.length / 4)
+  for (let i = 0, j = 0; i < data.length; i += 4, j++) {
+    gray[j] = Math.round(data[i] * 0.2126 + data[i + 1] * 0.7152 + data[i + 2] * 0.0722)
+  }
+  return gray
+}
+
+const gaussianBlur5x5 = (input, width, height) => {
+  const kernel = [1, 4, 6, 4, 1]
+  const kernelSum = 16
+  const temp = new Float32Array(input.length)
+  const output = new Uint8Array(input.length)
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let acc = 0
+      for (let k = -2; k <= 2; k++) {
+        const nx = Math.min(width - 1, Math.max(0, x + k))
+        acc += input[y * width + nx] * kernel[k + 2]
+      }
+      temp[y * width + x] = acc / kernelSum
+    }
+  }
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let acc = 0
+      for (let k = -2; k <= 2; k++) {
+        const ny = Math.min(height - 1, Math.max(0, y + k))
+        acc += temp[ny * width + x] * kernel[k + 2]
+      }
+      output[y * width + x] = Math.round(acc / kernelSum)
+    }
+  }
+
+  return output
+}
+
+const thresholdBinaryInverse = (input, threshold) => {
+  const output = new Uint8Array(input.length)
+  for (let i = 0; i < input.length; i++) {
+    output[i] = input[i] < threshold ? 255 : 0
+  }
+  return output
+}
+
+const dilateBinary = (mask, width, height) => {
+  const output = new Uint8Array(mask.length)
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const index = y * width + x
+      let shouldSet = false
+      for (let dy = -1; dy <= 1 && !shouldSet; dy++) {
+        const ny = y + dy
+        if (ny < 0 || ny >= height) continue
+        for (let dx = -1; dx <= 1; dx++) {
+          const nx = x + dx
+          if (nx < 0 || nx >= width) continue
+          if (mask[ny * width + nx]) {
+            shouldSet = true
+            break
+          }
+        }
+      }
+      output[index] = shouldSet ? 255 : 0
+    }
+  }
+  return output
+}
+
+const erodeBinary = (mask, width, height) => {
+  const output = new Uint8Array(mask.length)
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const index = y * width + x
+      let shouldKeep = true
+      for (let dy = -1; dy <= 1 && shouldKeep; dy++) {
+        const ny = y + dy
+        if (ny < 0 || ny >= height) {
+          shouldKeep = false
+          break
+        }
+        for (let dx = -1; dx <= 1; dx++) {
+          const nx = x + dx
+          if (nx < 0 || nx >= width || !mask[ny * width + nx]) {
+            shouldKeep = false
+            break
+          }
+        }
+      }
+      output[index] = shouldKeep ? 255 : 0
+    }
+  }
+  return output
+}
+
+const morphologicalOpen = (mask, width, height, iterations = 1) => {
+  let result = mask
+  for (let i = 0; i < iterations; i++) {
+    result = dilateBinary(erodeBinary(result, width, height), width, height)
+  }
+  return result
+}
+
+const morphologicalClose = (mask, width, height, iterations = 1) => {
+  let result = mask
+  for (let i = 0; i < iterations; i++) {
+    result = erodeBinary(dilateBinary(result, width, height), width, height)
+  }
+  return result
+}
+
+const createCandidateMask = (grayscale, width, height, thresholds) => {
+  const blurred = gaussianBlur5x5(grayscale, width, height)
+  const binary = thresholdBinaryInverse(blurred, thresholds.dark ?? 80)
+  const opened = morphologicalOpen(binary, width, height, 1)
+  const closed = morphologicalClose(opened, width, height, 1)
+  return { mask: closed, blurred }
+}
+
+const applyROIMask = (mask, width, height, roi) => {
+  if (!roi || !mask || !mask.length) return
+  const startX = Math.max(0, Math.floor(roi.x))
+  const startY = Math.max(0, Math.floor(roi.y))
+  const endX = Math.min(width, Math.ceil(roi.x + roi.width))
+  const endY = Math.min(height, Math.ceil(roi.y + roi.height))
+
+  for (let y = 0; y < height; y++) {
+    const rowOffset = y * width
+    const inYRange = y >= startY && y < endY
+    for (let x = 0; x < width; x++) {
+      const index = rowOffset + x
+      if (!inYRange || x < startX || x >= endX) {
+        mask[index] = 0
+      }
+    }
+  }
+}
+
+const buildMissedMask = (candidateMask, holes, width, height) => {
+  if (!candidateMask || candidateMask.length !== width * height) {
+    return null
+  }
+
+  const missed = new Uint8Array(candidateMask.length)
+  if (!holes || !holes.length) {
+    for (let i = 0; i < candidateMask.length; i++) {
+      if (candidateMask[i]) missed[i] = 255
+    }
+    return missed
+  }
+
+  const coverage = new Uint8Array(candidateMask.length)
+
+  for (const hole of holes) {
+    const centerX = hole.x
+    const centerY = hole.y
+    const radius = Math.max(2, hole.radius * 1.4)
+    const radiusSquared = radius * radius
+
+    const minX = Math.max(0, Math.floor(centerX - radius))
+    const maxX = Math.min(width - 1, Math.ceil(centerX + radius))
+    const minY = Math.max(0, Math.floor(centerY - radius))
+    const maxY = Math.min(height - 1, Math.ceil(centerY + radius))
+
+    for (let y = minY; y <= maxY; y++) {
+      const dy = y - centerY
+      const dySquared = dy * dy
+      const rowOffset = y * width
+      for (let x = minX; x <= maxX; x++) {
+        const dx = x - centerX
+        if (dx * dx + dySquared <= radiusSquared) {
+          coverage[rowOffset + x] = 1
+        }
+      }
+    }
+  }
+
+  for (let i = 0; i < candidateMask.length; i++) {
+    if (candidateMask[i] && !coverage[i]) {
+      missed[i] = 255
+    }
+  }
+
+  return missed
+}
+
+const segmentComponents = (mask, grayscale, width, height) => {
+  const pixelCount = width * height
+  const visited = new Uint8Array(pixelCount)
+  const queue = new Uint32Array(pixelCount)
+  const components = []
+
+  for (let start = 0; start < pixelCount; start++) {
+    if (visited[start] || mask[start] === 0) continue
+
+    let head = 0
+    let tail = 0
+    queue[tail++] = start
+    visited[start] = 1
+
+    const pixels = []
+    let area = 0
+    let sumIntensity = 0
+    let sumX = 0
+    let sumY = 0
+    let minX = width
+    let maxX = 0
+    let minY = height
+    let maxY = 0
+
+    while (head < tail) {
+      const index = queue[head++]
+      const y = Math.floor(index / width)
+      const x = index - y * width
+
+      area++
+      sumIntensity += grayscale[index]
+      sumX += x
+      sumY += y
+      if (x < minX) minX = x
+      if (x > maxX) maxX = x
+      if (y < minY) minY = y
+      if (y > maxY) maxY = y
+
+      pixels.push(index)
+
+      for (let dy = -1; dy <= 1; dy++) {
+        const ny = y + dy
+        if (ny < 0 || ny >= height) continue
+        for (let dx = -1; dx <= 1; dx++) {
+          const nx = x + dx
+          if (nx < 0 || nx >= width) continue
+          const neighbor = ny * width + nx
+          if (visited[neighbor] || mask[neighbor] === 0) continue
+
+          visited[neighbor] = 1
+          queue[tail++] = neighbor
+        }
+      }
+    }
+
+    components.push({
+      area,
+      sumIntensity,
+      sumX,
+      sumY,
+      minX,
+      maxX,
+      minY,
+      maxY,
+      pixels
+    })
+  }
+
+  return components
+}
+
+const classifyComponents = (components, width, height, thresholds) => {
+  const minHoleArea = 4
+  const validComponents = components.filter((component) => component.area >= minHoleArea)
+  if (!validComponents.length) {
+    return { holes: [], hexMask: new Uint8Array(width * height), areaThreshold: 0 }
+  }
+
+  const areas = validComponents.map((component) => component.area).sort((a, b) => a - b)
+  const percentile = Math.min(99, Math.max(1, thresholds.areaPercentile ?? 50))
+  const rawIndex = Math.floor((percentile / 100) * areas.length)
+  const percentileIndex = Math.min(areas.length - 1, Math.max(0, rawIndex))
+  const areaThreshold = areas[percentileIndex] || areas[areas.length - 1]
+
+  const holes = []
+
+  for (const component of validComponents) {
+    const { area, sumIntensity, sumX, sumY, pixels } = component
+    if (area < areaThreshold) {
+      continue
+    }
+
+    const centroidX = sumX / area
+    const centroidY = sumY / area
+    const mean = sumIntensity / area
+    const radius = Math.max(2.4, Math.sqrt(area / Math.PI))
+    const status = mean <= thresholds.dark ? 'cleaned' : 'blocked'
+
+    holes.push({
+      id: holes.length,
+      x: centroidX,
+      y: centroidY,
+      radius,
+      mean,
+      status,
+      autoStatus: status,
+      area,
+      brightness: mean,
+      pixels
+    })
+  }
+
+  const hexMask = new Uint8Array(width * height)
+  for (const hole of holes) {
+    for (const index of hole.pixels) {
+      hexMask[index] = 255
+    }
+    delete hole.pixels
+  }
+
+  return { holes, hexMask, areaThreshold }
+}
+
+const analyzeMesh = async () => {
+  if (!elements.meshCanvas || !elements.overlayCanvas) {
+    log('캔버스 요소를 찾을 수 없습니다.', 'error')
+    return
+  }
+  const { meshCanvas, overlayCanvas, canvasPlaceholder } = elements
+  const ctx = meshCanvas.getContext('2d')
+  if (!ctx) {
+    log('메쉬 캔버스 컨텍스트를 초기화하지 못했습니다.', 'error')
+    return
+  }
+
+  if (!state.imageBitmap) {
+    log('분석할 이미지가 없습니다.', 'error')
+    return
+  }
+
+  if (state.selectingROI) {
+    log('검사 영역 지정을 완료하거나 취소한 뒤 분석을 진행해 주세요.', 'warning')
+    return
+  }
+
+  if (state.isAnalyzing) {
+    state.pendingReanalysis = true
+    log('분석이 이미 진행 중입니다. 현재 작업이 완료되면 자동으로 다시 실행합니다.', 'warning')
+    return
+  }
+
+  state.isAnalyzing = true
+
+  if (canvasPlaceholder) {
+    canvasPlaceholder.classList.add('hidden')
+  }
+
+  setActionButtons({ analyze: false, reset: true, edit: false, undo: !!state.manualEdits.length, save: false })
+  log('이미지 데이터를 준비하는 중입니다...')
+
+  try {
+    overlayCanvas.width = meshCanvas.width
+    overlayCanvas.height = meshCanvas.height
+
+    const imageData = ctx.getImageData(0, 0, meshCanvas.width, meshCanvas.height)
+    const grayscale = computeGrayscale(imageData.data)
+    log('그레이스케일 변환을 완료했습니다. 노이즈 완화를 진행합니다...')
+
+    const { mask: candidateMask, blurred } = createCandidateMask(
+      grayscale,
+      meshCanvas.width,
+      meshCanvas.height,
+      state.thresholds
+    )
+    log('후보 영역을 추출하는 중입니다... (가우시안 블러 + 임계값 기반)')
+
+    if (state.roi) {
+      applyROIMask(candidateMask, meshCanvas.width, meshCanvas.height, state.roi)
+      log(
+        `선택한 검사 영역만 대상으로 분석합니다. x:${Math.round(state.roi.x)}, y:${Math.round(state.roi.y)}, 폭:${Math.round(
+          state.roi.width
+        )}, 높이:${Math.round(state.roi.height)} (픽셀)`
+      )
+    }
+
+    const components = segmentComponents(candidateMask, blurred, meshCanvas.width, meshCanvas.height)
+    log(`분할된 후보 영역: ${components.length.toLocaleString('ko-KR')}개`)
+
+    const { holes, hexMask, areaThreshold } = classifyComponents(
+      components,
+      meshCanvas.width,
+      meshCanvas.height,
+      state.thresholds
+    )
+    const cleanedCount = holes.filter((item) => item.status === 'cleaned').length
+    const blockedCount = holes.length - cleanedCount
+    const areaPercentile = state.thresholds.areaPercentile ?? 50
+    const topShare = Math.max(0, 100 - areaPercentile)
+    log(
+      `구멍 후보를 분류했습니다. 총 ${holes.length.toLocaleString('ko-KR')}개 (청소 완료 ${cleanedCount.toLocaleString('ko-KR')}개 / 청소 필요 ${blockedCount.toLocaleString('ko-KR')}개) — 면적 하한(P${areaPercentile}, 상위 ${topShare}%): ${Math.round(areaThreshold).toLocaleString('ko-KR')}px²`
+    )
+
+    state.results = holes
+    state.hexMask = hexMask
+    state.candidateMask = candidateMask
+    state.missedMask = buildMissedMask(candidateMask, holes, meshCanvas.width, meshCanvas.height)
+    state.manualEdits = []
+
+    let missedPixels = 0
+    if (state.missedMask) {
+      for (let i = 0; i < state.missedMask.length; i++) {
+        if (state.missedMask[i]) missedPixels++
+      }
+    }
+    if (missedPixels > 0) {
+      log(`점으로 인식되지 않은 후보 영역 픽셀: ${missedPixels.toLocaleString('ko-KR')} (초록색 강조)`, 'warning')
+    } else {
+      log('모든 후보 영역이 점으로 인식되었습니다.', 'info')
+    }
+
+    recalculateMetrics()
+    renderOverlay()
+    updateStats()
+    setActionButtons({ analyze: true, reset: true, edit: !!holes.length, undo: false, save: !!holes.length })
+
+    log('분석이 완료되었습니다. 필요 시 수동 교정을 진행하세요.')
+  } catch (error) {
+    console.error(error)
+    log(`분석 중 오류가 발생했습니다: ${error.message}`, 'error')
+    const hasResults = Array.isArray(state.results) && state.results.length > 0
+    setActionButtons({
+      analyze: !!state.imageBitmap,
+      reset: true,
+      edit: hasResults,
+      undo: !!state.manualEdits.length,
+      save: hasResults
+    })
+  } finally {
+    state.isAnalyzing = false
+    if (state.pendingReanalysis) {
+      state.pendingReanalysis = false
+      if (state.imageBitmap) {
+        log('대기 중이던 재분석을 실행합니다.', 'info')
+        setTimeout(() => analyzeMesh(), 0)
+      }
+    }
+  }
+}
+
+const handleOverlayClick = (event) => {
+  if (state.selectingROI) return
+  if (!state.editMode || !(state.results && state.results.length)) return
+  const { overlayCanvas } = elements
+  if (!overlayCanvas) return
+
+  const rect = overlayCanvas.getBoundingClientRect()
+  const scaleX = overlayCanvas.width / rect.width
+  const scaleY = overlayCanvas.height / rect.height
+
+  const x = (event.clientX - rect.left) * scaleX
+  const y = (event.clientY - rect.top) * scaleY
+
+  let nearest = null
+  let minDist = Infinity
+
+  for (const hole of state.results) {
+    const dx = hole.x - x
+    const dy = hole.y - y
+    const dist = Math.sqrt(dx * dx + dy * dy)
+    if (dist < hole.radius * 1.2 && dist < minDist) {
+      nearest = hole
+      minDist = dist
+    }
+  }
+
+  if (!nearest) {
+    log('선택한 위치에 구멍이 없습니다. 더 정확히 클릭해 주세요.', 'warning')
+    return
+  }
+
+  const previous = nearest.status
+  nearest.status = previous === 'cleaned' ? 'blocked' : 'cleaned'
+  state.manualEdits.push({ id: nearest.id, previous, next: nearest.status, timestamp: Date.now() })
+
+  if (state.candidateMask && state.candidateMask.length === overlayCanvas.width * overlayCanvas.height) {
+    state.missedMask = buildMissedMask(state.candidateMask, state.results, overlayCanvas.width, overlayCanvas.height)
+  }
+
+  recalculateMetrics()
+  renderOverlay()
+  updateStats()
+  setActionButtons({
+    analyze: true,
+    reset: true,
+    edit: true,
+    undo: !!state.manualEdits.length,
+    save: true
+  })
+
+  log(
+    `구멍 #${nearest.id}의 상태를 "${previous === 'cleaned' ? '청소 완료' : '청소 필요'}"에서 "${nearest.status === 'cleaned' ? '청소 완료' : '청소 필요'}"로 변경했습니다.`
+  )
+}
+
+const undoLastEdit = () => {
+  if (!state.manualEdits.length) {
+    log('되돌릴 편집이 없습니다.', 'warning')
+    return
+  }
+  const last = state.manualEdits.pop()
+  const hole = state.results?.find((item) => item.id === last.id)
+  if (!hole) return
+  hole.status = last.previous
+
+  const { overlayCanvas } = elements
+  if (overlayCanvas && state.candidateMask && state.candidateMask.length === overlayCanvas.width * overlayCanvas.height) {
+    state.missedMask = buildMissedMask(state.candidateMask, state.results, overlayCanvas.width, overlayCanvas.height)
+  }
+
+  recalculateMetrics()
+  renderOverlay()
+  updateStats()
+  setActionButtons({ analyze: true, reset: true, edit: true, undo: !!state.manualEdits.length, save: true })
+  log(`구멍 #${last.id}의 상태를 되돌렸습니다.`)
+}
+
+const loadImageToCanvas = async (file, source = 'upload') => {
+  try {
+    if (state.lastObjectUrl) {
+      URL.revokeObjectURL(state.lastObjectUrl)
+    }
+    const objectUrl = URL.createObjectURL(file)
+    state.lastObjectUrl = objectUrl
+
+    let bitmap
+    if ('createImageBitmap' in window) {
+      bitmap = await createImageBitmap(file)
+    } else {
+      bitmap = await new Promise((resolve, reject) => {
+        const img = new Image()
+        img.onload = () => resolve(img)
+        img.onerror = (err) => reject(err)
+        img.src = objectUrl
+      })
+    }
+
+    const { meshCanvas, overlayCanvas, canvasPlaceholder } = elements
+    if (!meshCanvas || !meshCanvas.getContext) {
+      throw new Error('캔버스 초기화 실패')
+    }
+
+    const maxWidth = 1024
+    const scale = Math.min(1, maxWidth / bitmap.width)
+    const width = Math.round(bitmap.width * scale)
+    const height = Math.round(bitmap.height * scale)
+
+    applyCanvasLayout(width, height)
+
+    const meshCtx = meshCanvas.getContext('2d')
+    meshCtx?.drawImage(bitmap, 0, 0, width, height)
+
+    state.image = file
+    state.imageBitmap = bitmap
+    state.results = null
+    state.hexMask = null
+    state.candidateMask = null
+    state.missedMask = null
+    state.manualEdits = []
+
+    updateROIControls()
+
+    if (canvasPlaceholder) {
+      canvasPlaceholder.classList.add('hidden')
+    }
+
+    ensureInspectionTitle()
+
+    clearOverlay()
+    updateStats()
+    setActionButtons({ analyze: true, reset: true, edit: false, undo: false, save: false })
+
+    const sourceLabel = source === 'camera' ? '카메라 촬영' : '파일 업로드'
+    log(`${sourceLabel} 이미지를 캔버스에 불러왔습니다. 분석을 시작할 수 있습니다.`)
+  } catch (error) {
+    console.error(error)
+    log('이미지를 불러오는 중 오류가 발생했습니다.', 'error')
+    resetWorkspace()
+  }
+}
+
+const setupEventListeners = () => {
+  elements.imageInput?.addEventListener('change', (event) => {
+    const file = event.target.files?.[0]
+    if (!file) {
+      log('선택된 파일이 없습니다.', 'error')
+      return
+    }
+    const preservedTitle = (elements.titleInput?.value ?? state.title ?? '').trim()
+    resetWorkspace()
+    if (preservedTitle) {
+      applyInspectionTitle(preservedTitle)
+    }
+    loadImageToCanvas(file, 'upload')
+  })
+
+  elements.titleInput?.addEventListener('input', (event) => {
+    const value = event.target.value ?? ''
+    applyInspectionTitle(value)
+  })
+
+  elements.titleInput?.addEventListener('blur', () => {
+    if (!state.title || !state.title.trim()) {
+      ensureInspectionTitle()
+    }
+  })
+
+  elements.startCameraButton?.addEventListener('click', () => {
+    startCameraStream()
+  })
+
+  elements.captureCameraButton?.addEventListener('click', () => {
+    captureCameraFrame()
+  })
+
+  elements.stopCameraButton?.addEventListener('click', () => {
+    stopCameraStream()
+    log('카메라 미리보기를 종료했습니다.')
+  })
+
+  elements.analyzeButton?.addEventListener('click', () => {
+    analyzeMesh()
+  })
+
+  elements.resetButton?.addEventListener('click', () => {
+    if (!state.image && !state.results) {
+      log('초기화할 내용이 없습니다.', 'warning')
+      return
+    }
+    resetWorkspace()
+  })
+
+  elements.roiSelectButton?.addEventListener('click', () => {
+    if (state.selectingROI) {
+      cancelROISelection()
+      return
+    }
+    beginROISelection()
+  })
+
+  elements.roiClearButton?.addEventListener('click', () => {
+    if (!state.roi) {
+      log('초기화할 ROI가 없습니다.', 'warning')
+      return
+    }
+    clearROI()
+    if (state.results) {
+      log('ROI 초기화가 적용되도록 “분석 시작”을 다시 실행하세요.', 'warning')
+    }
+  })
+
+  const thresholdHandler = () => {
+    updateThresholdLabels()
+    if (state.results) {
+      log('임계값이 변경되었습니다. 변경 사항을 적용하려면 다시 분석하세요.', 'warning')
+    }
+  }
+
+  elements.thresholdDark?.addEventListener('input', thresholdHandler)
+  elements.thresholdGray?.addEventListener('input', thresholdHandler)
+  elements.thresholdArea?.addEventListener('input', thresholdHandler)
+
+  elements.toggleEditMode?.addEventListener('click', () => {
+    if (!state.results || !state.results.length) {
+      log('편집할 분석 결과가 없습니다.', 'warning')
+      return
+    }
+    state.editMode = !state.editMode
+    elements.toggleEditMode.textContent = state.editMode ? '편집 모드 종료' : '편집 모드 전환'
+    log(state.editMode ? '편집 모드를 활성화했습니다. 원하는 구멍을 클릭하여 상태를 변경하세요.' : '편집 모드를 종료했습니다.')
+    updateOverlayInteraction()
+  })
+
+  elements.undoButton?.addEventListener('click', () => {
+    undoLastEdit()
+  })
+
+  elements.overlayCanvas?.addEventListener('click', handleOverlayClick)
+  elements.overlayCanvas?.addEventListener('pointerdown', handleOverlayPointerDown)
+  elements.overlayCanvas?.addEventListener('pointermove', handleOverlayPointerMove)
+  elements.overlayCanvas?.addEventListener('pointerup', handleOverlayPointerUp)
+  elements.overlayCanvas?.addEventListener('pointerleave', handleOverlayPointerLeave)
+  elements.overlayCanvas?.addEventListener('pointercancel', handleOverlayPointerLeave)
+
+  elements.saveInspection?.addEventListener('click', () => {
+    if (!state.results || !state.results.length) {
+      log('저장할 분석 결과가 없습니다.', 'warning')
+      return
+    }
+
+    const title = ensureInspectionTitle()
+
+    const payload = {
+      title,
+      total: state.results.length,
+      cleaned: state.results.filter((item) => item.status === 'cleaned').length,
+      blocked: state.results.filter((item) => item.status === 'blocked').length,
+      cleaningRate: elements.cleaningRate?.textContent ?? '0%',
+      thresholds: { ...state.thresholds },
+      manualEdits: state.manualEdits,
+      timestamp: new Date().toISOString()
+    }
+
+    log(`"${title}" 검사 결과 저장 API 연동은 다음 단계에서 구현됩니다.`)
+    console.info('Inspection payload preview', payload)
+  })
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  registerElements()
+  updateThresholdLabels()
+  updateCameraControls(false)
+  resetStats()
+  updateROIControls()
+  setActionButtons({ analyze: false, reset: false, edit: false, undo: false, save: false })
+  setupEventListeners()
+})
