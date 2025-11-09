@@ -17,6 +17,7 @@ const state = {
   hexMask: null,
   candidateMask: null,
   missedMask: null,
+  virtualHoles: null,
   title: '',
   cameraStream: null,
   editMode: false,
@@ -779,6 +780,18 @@ const drawHoleOverlay = () => {
     ctx.stroke()
   })
 
+  ;(state.virtualHoles ?? []).forEach((vhole) => {
+    ctx.beginPath()
+    ctx.strokeStyle = 'rgba(147, 51, 234, 0.9)'
+    ctx.fillStyle = 'rgba(147, 51, 234, 0.3)'
+    ctx.setLineDash([3, 3])
+    ctx.lineWidth = 1.5
+    ctx.arc(vhole.x, vhole.y, vhole.radius * 0.8, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.stroke()
+    ctx.setLineDash([])
+  })
+
   ctx.restore()
 }
 
@@ -1118,6 +1131,66 @@ const classifyComponents = (components, width, height, thresholds) => {
   return { holes, hexMask, areaThreshold }
 }
 
+const detectVirtualHoles = (holes, width, height) => {
+  if (!holes || holes.length < 10) return []
+
+  const sortedByY = [...holes].sort((a, b) => a.y - b.y)
+  const sortedByX = [...holes].sort((a, b) => a.x - b.x)
+
+  const distancesX = []
+  const distancesY = []
+  
+  for (let i = 1; i < Math.min(sortedByX.length, 20); i++) {
+    const dx = sortedByX[i].x - sortedByX[i - 1].x
+    if (dx > 10 && dx < 100) distancesX.push(dx)
+  }
+  
+  for (let i = 1; i < Math.min(sortedByY.length, 20); i++) {
+    const dy = sortedByY[i].y - sortedByY[i - 1].y
+    if (dy > 10 && dy < 100) distancesY.push(dy)
+  }
+
+  if (distancesX.length === 0 || distancesY.length === 0) return []
+
+  distancesX.sort((a, b) => a - b)
+  distancesY.sort((a, b) => a - b)
+  const spacingX = distancesX[Math.floor(distancesX.length / 2)]
+  const spacingY = distancesY[Math.floor(distancesY.length / 2)]
+  
+  const avgRadius = holes.reduce((sum, h) => sum + h.radius, 0) / holes.length
+
+  const minX = Math.min(...holes.map(h => h.x))
+  const maxX = Math.max(...holes.map(h => h.x))
+  const minY = Math.min(...holes.map(h => h.y))
+  const maxY = Math.max(...holes.map(h => h.y))
+
+  const virtualHoles = []
+  const threshold = avgRadius * 1.5
+
+  for (let y = minY; y <= maxY; y += spacingY) {
+    for (let x = minX; x <= maxX; x += spacingX) {
+      const hasNearby = holes.some(hole => {
+        const dx = hole.x - x
+        const dy = hole.y - y
+        return Math.sqrt(dx * dx + dy * dy) < threshold
+      })
+
+      if (!hasNearby) {
+        virtualHoles.push({
+          x,
+          y,
+          radius: avgRadius,
+          virtual: true
+        })
+      }
+    }
+  }
+
+  console.log(`[가상 점 탐지] 간격: X=${spacingX.toFixed(1)}px, Y=${spacingY.toFixed(1)}px, 가상 점: ${virtualHoles.length}개`)
+
+  return virtualHoles
+}
+
 const analyzeMesh = async () => {
   if (!elements.meshCanvas || !elements.overlayCanvas) {
     log('캔버스 요소를 찾을 수 없습니다.', 'error')
@@ -1201,6 +1274,7 @@ const analyzeMesh = async () => {
     state.hexMask = hexMask
     state.candidateMask = candidateMask
     state.missedMask = buildMissedMask(candidateMask, holes, meshCanvas.width, meshCanvas.height)
+    state.virtualHoles = detectVirtualHoles(holes, meshCanvas.width, meshCanvas.height)
     state.manualEdits = []
 
     let missedPixels = 0

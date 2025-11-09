@@ -346,6 +346,11 @@ const Home = () => (
               <dt class="font-semibold text-slate-900">미검출 후보</dt>
               <dd class="text-xs text-slate-600">아직 점으로 인식되지 않은 후보 영역(임계값 및 교정 필요)</dd>
             </div>
+            <div class="flex items-center gap-3">
+              <span class="h-3 w-3 rounded-full bg-purple-500"></span>
+              <dt class="font-semibold text-slate-900">가상 점 (보라색)</dt>
+              <dd class="text-xs text-slate-600">격자 패턴 상 존재해야 하지만 인식되지 않은 구멍</dd>
+            </div>
           </dl>
         </section>
       </aside>
