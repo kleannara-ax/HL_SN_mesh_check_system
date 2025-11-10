@@ -34,6 +34,35 @@ const Home = () => (
           </p>
         </header>
 
+        {/* 탭 네비게이션 */}
+        <div class="border-b border-slate-200">
+          <nav class="flex gap-2" aria-label="Tabs">
+            <button
+              id="tab-upload"
+              class="tab-button active border-b-2 border-emerald-600 px-4 py-3 text-sm font-semibold text-emerald-600"
+              data-tab="upload"
+            >
+              1. 이미지 업로드 & 설정
+            </button>
+            <button
+              id="tab-result"
+              class="tab-button border-b-2 border-transparent px-4 py-3 text-sm font-medium text-slate-600 hover:border-slate-300 hover:text-slate-900"
+              data-tab="result"
+            >
+              2. 분석 결과 시각화
+            </button>
+            <button
+              id="tab-history"
+              class="tab-button border-b-2 border-transparent px-4 py-3 text-sm font-medium text-slate-600 hover:border-slate-300 hover:text-slate-900"
+              data-tab="history"
+            >
+              3. 검사 이력 전체보기
+            </button>
+          </nav>
+        </div>
+
+        {/* 탭 1: 이미지 업로드 & 설정 */}
+        <div id="content-upload" class="tab-content">
         <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/40">
           <h2 class="text-lg font-semibold text-slate-900">1. 이미지 업로드 & 기본 설정</h2>
           <p class="mt-1 text-sm text-slate-600">
@@ -217,7 +246,11 @@ const Home = () => (
             </p>
           </div>
         </section>
+        </div>
+        {/* 탭 1 끝 */}
 
+        {/* 탭 2: 분석 결과 시각화 */}
+        <div id="content-result" class="tab-content hidden">
         <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/40">
           <h2 class="text-lg font-semibold text-slate-900">2. 분석 결과 시각화</h2>
           <p class="mt-1 text-sm text-slate-600">
@@ -349,6 +382,23 @@ const Home = () => (
             </aside>
           </div>
         </section>
+        </div>
+        {/* 탭 2 끝 */}
+
+        {/* 탭 3: 검사 이력 전체보기 */}
+        <div id="content-history" class="tab-content hidden">
+          <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/40">
+            <h2 class="text-lg font-semibold text-slate-900">검사 이력 전체보기</h2>
+            <p class="mt-2 text-sm text-slate-600">
+              저장된 모든 검사 기록을 확인할 수 있습니다. 데이터베이스에 저장된 이력이 표시됩니다.
+            </p>
+            <div id="historyList" class="mt-6 space-y-4">
+              <p class="text-center text-sm text-slate-500">로딩 중...</p>
+            </div>
+          </section>
+        </div>
+        {/* 탭 3 끝 */}
+
       </main>
 
       <aside class="w-full max-w-sm space-y-6 lg:sticky lg:top-10">

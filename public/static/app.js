@@ -2189,6 +2189,91 @@ const setupEventListeners = () => {
     )
     renderOverlay()
   })
+
+  // 탭 전환 이벤트
+  const tabButtons = document.querySelectorAll('.tab-button')
+  const tabContents = document.querySelectorAll('.tab-content')
+  
+  tabButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      const targetTab = button.getAttribute('data-tab')
+      
+      // 모든 탭 버튼 비활성화
+      tabButtons.forEach(btn => {
+        btn.classList.remove('active', 'border-emerald-600', 'text-emerald-600')
+        btn.classList.add('border-transparent', 'text-slate-600')
+      })
+      
+      // 클릭한 탭 버튼 활성화
+      button.classList.add('active', 'border-emerald-600', 'text-emerald-600')
+      button.classList.remove('border-transparent', 'text-slate-600')
+      
+      // 모든 탭 컨텐츠 숨김
+      tabContents.forEach(content => {
+        content.classList.add('hidden')
+      })
+      
+      // 선택한 탭 컨텐츠 표시
+      const targetContent = document.getElementById(`content-${targetTab}`)
+      if (targetContent) {
+        targetContent.classList.remove('hidden')
+      }
+      
+      // 탭 3 (이력)을 선택하면 이력 로드
+      if (targetTab === 'history') {
+        loadInspectionHistory()
+      }
+    })
+  })
+}
+
+// 검사 이력 로드 함수
+const loadInspectionHistory = async () => {
+  const historyList = document.getElementById('historyList')
+  if (!historyList) return
+  
+  historyList.innerHTML = '<p class="text-center text-sm text-slate-500">로딩 중...</p>'
+  
+  try {
+    const response = await fetch('/api/inspections?limit=50&offset=0')
+    const result = await response.json()
+    
+    if (result.success && result.data && result.data.length > 0) {
+      historyList.innerHTML = result.data.map(inspection => `
+        <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+          <div class="flex items-start justify-between">
+            <div class="flex-1">
+              <h3 class="font-semibold text-slate-900">${inspection.title || '제목 없음'}</h3>
+              <p class="mt-1 text-xs text-slate-600">${new Date(inspection.created_at).toLocaleString('ko-KR')}</p>
+            </div>
+            <div class="text-right">
+              <p class="text-2xl font-bold text-emerald-600">${inspection.cleaning_rate_area.toFixed(1)}%</p>
+              <p class="text-xs text-slate-600">청소율</p>
+            </div>
+          </div>
+          <div class="mt-3 grid grid-cols-3 gap-2 text-xs">
+            <div class="rounded bg-white p-2 text-center">
+              <p class="font-semibold text-slate-900">${inspection.total_holes}</p>
+              <p class="text-slate-600">총 구멍</p>
+            </div>
+            <div class="rounded bg-white p-2 text-center">
+              <p class="font-semibold text-sky-600">${inspection.cleaned_holes}</p>
+              <p class="text-slate-600">청소 완료</p>
+            </div>
+            <div class="rounded bg-white p-2 text-center">
+              <p class="font-semibold text-rose-600">${inspection.blocked_holes}</p>
+              <p class="text-slate-600">청소 필요</p>
+            </div>
+          </div>
+        </div>
+      `).join('')
+    } else {
+      historyList.innerHTML = '<p class="text-center text-sm text-slate-500">저장된 검사 이력이 없습니다.</p>'
+    }
+  } catch (error) {
+    console.error('Failed to load history:', error)
+    historyList.innerHTML = '<p class="text-center text-sm text-rose-600">이력을 불러오는데 실패했습니다.</p>'
+  }
 }
 
 window.addEventListener('DOMContentLoaded', () => {
