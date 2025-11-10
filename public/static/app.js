@@ -395,7 +395,8 @@ const recalculateMetrics = () => {
   const inspectionArea = roiArea - missedPixels  // 검사 가능 면적 (미분류 제외)
   
   const cleanedArea = cleanedAreaPixels
-  const blockedArea = blockedAreaPixels
+  // 청소 필요 면적 및 골격 제외 면적 = 전체 면적 - 파란색 점 면적
+  const blockedArea = roiArea - cleanedAreaPixels
   const totalArea = roiArea
   const totalCount = holes.length
   
