@@ -1147,6 +1147,15 @@ const downloadOverlayImage = () => {
 
   log('화면에 표시된 오버레이를 다운로드하는 중...')
 
+  // Debug: Check what's in state
+  console.log('[Download Debug] State info:')
+  console.log('- Results count:', state.results?.length || 0)
+  console.log('- Cleaned holes:', state.results?.filter(h => h.status === 'cleaned').length || 0)
+  console.log('- Blocked holes:', state.results?.filter(h => h.status === 'blocked').length || 0)
+  console.log('- Virtual holes:', state.virtualHoles?.length || 0)
+  console.log('- HexMask exists:', !!state.hexMask)
+  console.log('- MissedMask exists:', !!state.missedMask)
+
   // Create a new canvas with white background to make colors visible
   const exportCanvas = document.createElement('canvas')
   exportCanvas.width = overlayCanvas.width
@@ -1164,6 +1173,8 @@ const downloadOverlayImage = () => {
   
   // Draw the overlay canvas on top
   exportCtx.drawImage(overlayCanvas, 0, 0)
+  
+  console.log('[Download Debug] Export canvas size:', exportCanvas.width, 'x', exportCanvas.height)
 
   // Convert to blob and download
   exportCanvas.toBlob((blob) => {
