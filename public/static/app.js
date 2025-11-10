@@ -1167,47 +1167,22 @@ const downloadOverlayImage = () => {
   // Clear canvas (transparent background)
   ctx.clearRect(0, 0, width, height)
 
-  // Draw mask layers (hex lattice and missed areas) FIRST
+  // Draw mask layers (hex lattice and missed areas) - ENTIRE AREAS FIRST
   const totalPixels = width * height
-  const { hexMask, missedMask, results } = state
-  
-  // Create a coverage mask to track which pixels are covered by holes
-  const coverMask = new Uint8Array(totalPixels)
-  
-  // Mark pixels covered by holes
-  if (results && results.length) {
-    for (const hole of results) {
-      const centerX = hole.x
-      const centerY = hole.y
-      const radius = Math.max(2, hole.radius * 1.15)
-      const radiusSquared = radius * radius
-      const minX = Math.max(0, Math.floor(centerX - radius))
-      const maxX = Math.min(width - 1, Math.ceil(centerX + radius))
-      const minY = Math.max(0, Math.floor(centerY - radius))
-      const maxY = Math.min(height - 1, Math.ceil(centerY + radius))
-
-      for (let y = minY; y <= maxY; y++) {
-        const dy = y - centerY
-        const rowOffset = y * width
-        const dySquared = dy * dy
-        for (let x = minX; x <= maxX; x++) {
-          const dx = x - centerX
-          if (dx * dx + dySquared <= radiusSquared) {
-            coverMask[rowOffset + x] = 1
-          }
-        }
-      }
-    }
-  }
+  const { hexMask, missedMask } = state
   
   if (hexMask || missedMask) {
     const imageData = ctx.createImageData(width, height)
     const data = imageData.data
+    
+    let hexCount = 0
+    let missedCount = 0
 
-    // Draw hex lattice (green) - only where NOT covered by holes
+    // Draw hex lattice (green) - FULL AREA
     if (hexMask && hexMask.length === totalPixels) {
       for (let i = 0; i < totalPixels; i++) {
-        if (hexMask[i] > 0 && !coverMask[i]) {
+        if (hexMask[i] > 0) {
+          hexCount++
           const idx = i * 4
           data[idx] = 24       // R
           data[idx + 1] = 180  // G
@@ -1217,10 +1192,11 @@ const downloadOverlayImage = () => {
       }
     }
 
-    // Draw missed mask (bright green) - only where NOT covered by holes
+    // Draw missed mask (bright green) - FULL AREA, overwrites hex where overlapping
     if (missedMask && missedMask.length === totalPixels) {
       for (let i = 0; i < totalPixels; i++) {
-        if (missedMask[i] > 0 && !coverMask[i]) {
+        if (missedMask[i] > 0) {
+          missedCount++
           const idx = i * 4
           data[idx] = 48       // R
           data[idx + 1] = 255  // G
@@ -1230,13 +1206,24 @@ const downloadOverlayImage = () => {
       }
     }
 
+    console.log('[Download] Hex pixels:', hexCount, 'Missed pixels:', missedCount)
     ctx.putImageData(imageData, 0, 0)
   }
 
   // Draw regular holes (cleaned = blue, blocked = pink) ON TOP
   ctx.save()
   ctx.lineWidth = 2
+  
+  let cleanedCount = 0
+  let blockedCount = 0
+  
   ;(state.results ?? []).forEach((hole) => {
+    if (hole.status === 'cleaned') {
+      cleanedCount++
+    } else {
+      blockedCount++
+    }
+    
     ctx.beginPath()
     if (hole.status === 'cleaned') {
       ctx.strokeStyle = 'rgba(56, 189, 248, 1.0)'  // Sky blue
@@ -1249,8 +1236,11 @@ const downloadOverlayImage = () => {
     ctx.fill()
     ctx.stroke()
   })
+  
+  console.log('[Download] Holes drawn - Cleaned:', cleanedCount, 'Blocked:', blockedCount)
 
   // Draw virtual holes (purple dashed circles)
+  const virtualCount = (state.virtualHoles ?? []).length
   ;(state.virtualHoles ?? []).forEach((vhole) => {
     ctx.beginPath()
     ctx.strokeStyle = 'rgba(147, 51, 234, 1.0)'  // Purple
@@ -1262,6 +1252,8 @@ const downloadOverlayImage = () => {
     ctx.stroke()
     ctx.setLineDash([])  // Reset dash
   })
+  
+  console.log('[Download] Virtual holes drawn:', virtualCount)
 
   ctx.restore()
 
