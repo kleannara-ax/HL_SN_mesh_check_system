@@ -1167,6 +1167,43 @@ const downloadOverlayImage = () => {
   // Clear canvas (transparent background)
   ctx.clearRect(0, 0, width, height)
 
+  // Draw mask layers (hex lattice and missed areas)
+  const totalPixels = width * height
+  const { hexMask, missedMask } = state
+  
+  if (hexMask || missedMask) {
+    const imageData = ctx.createImageData(width, height)
+    const data = imageData.data
+
+    // Draw hex lattice (green)
+    if (hexMask && hexMask.length === totalPixels) {
+      for (let i = 0; i < totalPixels; i++) {
+        if (hexMask[i] > 0) {
+          const idx = i * 4
+          data[idx] = 24       // R
+          data[idx + 1] = 180  // G
+          data[idx + 2] = 92   // B
+          data[idx + 3] = 180  // A (more opaque for download)
+        }
+      }
+    }
+
+    // Draw missed mask (bright green)
+    if (missedMask && missedMask.length === totalPixels) {
+      for (let i = 0; i < totalPixels; i++) {
+        if (missedMask[i] > 0) {
+          const idx = i * 4
+          data[idx] = 48       // R
+          data[idx + 1] = 255  // G
+          data[idx + 2] = 128  // B
+          data[idx + 3] = 220  // A (more opaque for download)
+        }
+      }
+    }
+
+    ctx.putImageData(imageData, 0, 0)
+  }
+
   // Draw regular holes (cleaned = blue, blocked = pink)
   ctx.save()
   ctx.lineWidth = 2
