@@ -34,7 +34,8 @@ const state = {
   roi: null,
   selectingROI: false,
   selectionStart: null,
-  selectionPreview: null
+  selectionPreview: null,
+  convertMissedToCleaned: false
 }
 
 const elements = {}
@@ -135,6 +136,7 @@ const setActionButtons = ({ analyze, reset, edit, undo, save }) => {
   if (elements.undoButton) elements.undoButton.disabled = !undo
   if (elements.saveInspection) elements.saveInspection.disabled = !save
   if (elements.downloadOverlayButton) elements.downloadOverlayButton.disabled = !save
+  if (elements.convertMissedToCleaned) elements.convertMissedToCleaned.disabled = !save
   updateOverlayInteraction()
 }
 
@@ -184,6 +186,7 @@ const resetWorkspace = () => {
   state.manualEdits = []
   state.isAnalyzing = false
   state.pendingReanalysis = false
+  state.convertMissedToCleaned = false
   if (state.lastObjectUrl) {
     URL.revokeObjectURL(state.lastObjectUrl)
     state.lastObjectUrl = null
@@ -193,6 +196,9 @@ const resetWorkspace = () => {
   stopCameraStream()
   if (elements.imageInput) {
     elements.imageInput.value = ''
+  }
+  if (elements.convertMissedToCleaned) {
+    elements.convertMissedToCleaned.checked = false
   }
   resetCanvas()
   resetStats()
@@ -236,6 +242,7 @@ const registerElements = () => {
   elements.roiSelectButton = document.getElementById('roiSelectButton')
   elements.roiClearButton = document.getElementById('roiClearButton')
   elements.downloadOverlayButton = document.getElementById('downloadOverlayButton')
+  elements.convertMissedToCleaned = document.getElementById('convertMissedToCleaned')
 }
 
 const updateStats = () => {
@@ -658,7 +665,8 @@ const drawMaskLayers = () => {
   //   }
   // }
 
-  if (missedMask && missedMask.length === totalPixels) {
+  // 미검출 후보 표시 (체크박스가 꺼져있을 때만)
+  if (!state.convertMissedToCleaned && missedMask && missedMask.length === totalPixels) {
     for (let i = 0; i < totalPixels; i++) {
       if (missedMask[i] > 0) {
         const idx = i * 4
@@ -879,6 +887,27 @@ const renderOverlay = () => {
     state.missedMask = null
   }
 
+  // 체크박스가 활성화되면 missedMask에서 파란색 점 생성
+  if (state.convertMissedToCleaned && state.missedMask) {
+    const missedHoles = createHolesFromMissedMask(state.missedMask, width, height)
+    if (missedHoles.length > 0) {
+      // 기존 results에서 fromMissed가 아닌 것만 유지하고 새로 생성된 점 추가
+      const originalHoles = (state.results || []).filter(h => !h.fromMissed)
+      state.results = [...originalHoles, ...missedHoles]
+      // 메트릭 재계산
+      updateStats()
+    }
+  } else {
+    // 체크박스가 꺼지면 fromMissed 점들 제거
+    if (state.results) {
+      const originalHoles = state.results.filter(h => !h.fromMissed)
+      if (originalHoles.length !== state.results.length) {
+        state.results = originalHoles
+        updateStats()
+      }
+    }
+  }
+
   ctx.clearRect(0, 0, width, height)
   drawMaskLayers()
   drawHoleOverlay()
@@ -1070,6 +1099,80 @@ const buildMissedMask = (candidateMask, holes, width, height) => {
   }
 
   return missed
+}
+
+// 미검출 후보 영역에서 파란색 점(청소 완료) 생성
+const createHolesFromMissedMask = (missedMask, width, height) => {
+  if (!missedMask || missedMask.length !== width * height) {
+    return []
+  }
+
+  // Connected components 분석으로 각 미검출 영역 찾기
+  const visited = new Uint8Array(width * height)
+  const newHoles = []
+  let holeId = 10000 // 기존 holes와 구분하기 위해 큰 ID 사용
+
+  for (let i = 0; i < missedMask.length; i++) {
+    if (missedMask[i] > 0 && !visited[i]) {
+      // BFS로 연결된 영역 찾기
+      const queue = [i]
+      visited[i] = 1
+      let head = 0
+      let sumX = 0
+      let sumY = 0
+      let area = 0
+
+      while (head < queue.length) {
+        const current = queue[head++]
+        const y = Math.floor(current / width)
+        const x = current % width
+        sumX += x
+        sumY += y
+        area++
+
+        // 8방향 이웃 탐색
+        const neighbors = [
+          [-1, -1], [-1, 0], [-1, 1],
+          [0, -1], [0, 1],
+          [1, -1], [1, 0], [1, 1]
+        ]
+
+        for (const [dy, dx] of neighbors) {
+          const ny = y + dy
+          const nx = x + dx
+          if (ny >= 0 && ny < height && nx >= 0 && nx < width) {
+            const neighbor = ny * width + nx
+            if (missedMask[neighbor] > 0 && !visited[neighbor]) {
+              visited[neighbor] = 1
+              queue.push(neighbor)
+            }
+          }
+        }
+      }
+
+      // 영역이 충분히 크면 점으로 추가 (최소 4 픽셀)
+      if (area >= 4) {
+        const centroidX = sumX / area
+        const centroidY = sumY / area
+        const radius = Math.max(2.4, Math.sqrt(area / Math.PI))
+
+        newHoles.push({
+          id: holeId++,
+          x: centroidX,
+          y: centroidY,
+          radius,
+          mean: 50, // 청소 완료로 간주 (임계값 80보다 낮음)
+          status: 'cleaned',
+          autoStatus: 'cleaned',
+          area,
+          brightness: 50,
+          fromMissed: true // 미검출 후보에서 생성되었음을 표시
+        })
+      }
+    }
+  }
+
+  return newHoles
 }
 
 const segmentComponents = (mask, grayscale, width, height) => {
@@ -1768,6 +1871,15 @@ const setupEventListeners = () => {
 
   elements.downloadOverlayButton?.addEventListener('click', () => {
     downloadOverlayImage()
+  })
+
+  elements.convertMissedToCleaned?.addEventListener('change', (event) => {
+    state.convertMissedToCleaned = event.target.checked
+    log(state.convertMissedToCleaned 
+      ? '✅ 미검출 후보를 청소 완료(파란색 점)로 변환합니다.' 
+      : '⚠️ 미검출 후보 변환이 해제되었습니다. 형광 초록색으로 표시됩니다.'
+    )
+    renderOverlay()
   })
 }
 

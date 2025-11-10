@@ -193,6 +193,28 @@ const Home = () => (
               <span class="text-[11px] text-slate-9000">ROI를 변경한 뒤에는 “분석 시작”을 다시 실행해 주세요.</span>
             </div>
           </div>
+
+          <div class="mt-6 space-y-3 rounded-xl border border-slate-200 bg-white/40 p-4">
+            <h3 class="text-sm font-semibold text-slate-700">미검출 후보 처리</h3>
+            <p class="text-xs text-slate-600">
+              형광 초록색으로 표시된 미검출 후보 영역을 청소 완료(파란색 점)로 일괄 변환할 수 있습니다. 
+              이 기능은 임계값 조정만으로는 인식되지 않지만 육안으로 청소 완료로 판단되는 영역을 처리할 때 유용합니다.
+            </p>
+            <div class="flex items-center gap-3">
+              <label class="flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="convertMissedToCleaned"
+                  class="h-4 w-4 cursor-pointer rounded border-slate-300 text-sky-600 focus:ring-2 focus:ring-sky-500 disabled:cursor-not-allowed"
+                  disabled
+                />
+                <span class="text-sm font-medium text-slate-700">미검출 후보를 청소 완료로 변환</span>
+              </label>
+            </div>
+            <p class="text-[11px] text-slate-500">
+              ⚠️ 이 기능을 활성화하면 형광 초록색 영역이 사라지고, 해당 위치에 파란색 점이 생성됩니다.
+            </p>
+          </div>
         </section>
 
         <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/40">
