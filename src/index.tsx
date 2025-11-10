@@ -206,6 +206,7 @@ const Home = () => (
                   type="checkbox"
                   id="convertMissedToCleaned"
                   class="h-4 w-4 cursor-pointer rounded border-slate-300 text-sky-600 focus:ring-2 focus:ring-sky-500 disabled:cursor-not-allowed"
+                  checked
                   disabled
                 />
                 <span class="text-sm font-medium text-slate-700">미검출 후보를 청소 완료로 변환</span>

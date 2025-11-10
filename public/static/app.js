@@ -35,7 +35,7 @@ const state = {
   selectingROI: false,
   selectionStart: null,
   selectionPreview: null,
-  convertMissedToCleaned: false
+  convertMissedToCleaned: true  // 기본값: 체크됨
 }
 
 const elements = {}
@@ -186,7 +186,7 @@ const resetWorkspace = () => {
   state.manualEdits = []
   state.isAnalyzing = false
   state.pendingReanalysis = false
-  state.convertMissedToCleaned = false
+  state.convertMissedToCleaned = true  // 기본값: 체크됨
   if (state.lastObjectUrl) {
     URL.revokeObjectURL(state.lastObjectUrl)
     state.lastObjectUrl = null
@@ -198,7 +198,7 @@ const resetWorkspace = () => {
     elements.imageInput.value = ''
   }
   if (elements.convertMissedToCleaned) {
-    elements.convertMissedToCleaned.checked = false
+    elements.convertMissedToCleaned.checked = true  // 기본값: 체크됨
   }
   resetCanvas()
   resetStats()
