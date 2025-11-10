@@ -300,7 +300,8 @@ const recalculateMetrics = () => {
     }
   }
 
-  const missedPixels = countMaskPixels(state.missedMask)
+  // 체크박스가 켜져있으면 missedMask를 청소 완료로 간주하므로 missedPixels = 0
+  const missedPixels = state.convertMissedToCleaned ? 0 : countMaskPixels(state.missedMask)
   const hexPixels = countMaskPixels(state.hexMask)
   
   const canvas = elements.meshCanvas
