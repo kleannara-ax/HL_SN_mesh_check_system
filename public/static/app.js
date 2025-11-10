@@ -283,55 +283,139 @@ const recalculateMetrics = () => {
   const holes = state.results ?? []
   let cleanedCount = 0
   let blockedCount = 0
-  let cleanedAreaHoles = 0
-  let blockedAreaHoles = 0
+  let cleanedAreaPixels = 0
+  let blockedAreaPixels = 0
 
+  // 픽셀 기반 면적 계산을 위한 마스크 생성
+  const canvas = elements.meshCanvas
+  if (!canvas) {
+    return defaultMetrics()
+  }
+  
+  const width = canvas.width
+  const height = canvas.height
+  const totalPixels = width * height
+  
+  // 청소 완료/필요 영역의 실제 픽셀 마스크 생성
+  const cleanedMask = new Uint8Array(totalPixels)
+  const blockedMask = new Uint8Array(totalPixels)
+  
   for (const hole of holes) {
-    const area = Number.isFinite(hole.area) ? hole.area : 0
+    // 구멍 개수 카운트
     if (hole.status === 'cleaned') {
       cleanedCount++
-      cleanedAreaHoles += area
     } else if (hole.status === 'blocked') {
       blockedCount++
-      blockedAreaHoles += area
     } else {
-      blockedAreaHoles += area
       blockedCount++
     }
+    
+    // 각 구멍의 픽셀을 해당 마스크에 표시
+    const centerX = hole.x
+    const centerY = hole.y
+    const radius = Math.max(2, hole.radius * 1.15)  // 실제 구멍 크기
+    const radiusSquared = radius * radius
+    
+    const minX = Math.max(0, Math.floor(centerX - radius))
+    const maxX = Math.min(width - 1, Math.ceil(centerX + radius))
+    const minY = Math.max(0, Math.floor(centerY - radius))
+    const maxY = Math.min(height - 1, Math.ceil(centerY + radius))
+    
+    for (let y = minY; y <= maxY; y++) {
+      const dy = y - centerY
+      const dySquared = dy * dy
+      const rowOffset = y * width
+      
+      for (let x = minX; x <= maxX; x++) {
+        const dx = x - centerX
+        if (dx * dx + dySquared <= radiusSquared) {
+          const index = rowOffset + x
+          if (hole.status === 'cleaned') {
+            cleanedMask[index] = 1
+          } else {
+            blockedMask[index] = 1
+          }
+        }
+      }
+    }
   }
-
-  // 체크박스가 켜져있으면 missedMask를 청소 완료로 간주하므로 missedPixels = 0
-  const missedPixels = state.convertMissedToCleaned ? 0 : countMaskPixels(state.missedMask)
-  const hexPixels = countMaskPixels(state.hexMask)
   
-  const canvas = elements.meshCanvas
-  const canvasArea = canvas ? canvas.width * canvas.height : 0
-  const roiArea = state.roi ? state.roi.width * state.roi.height : canvasArea
+  // ROI 영역만 카운트
+  const roiArea = state.roi ? state.roi.width * state.roi.height : totalPixels
   
-  const inspectionArea = roiArea - missedPixels
+  if (state.roi) {
+    const startX = Math.max(0, Math.floor(state.roi.x))
+    const startY = Math.max(0, Math.floor(state.roi.y))
+    const endX = Math.min(width, Math.ceil(state.roi.x + state.roi.width))
+    const endY = Math.min(height, Math.ceil(state.roi.y + state.roi.height))
+    
+    for (let y = startY; y < endY; y++) {
+      const rowOffset = y * width
+      for (let x = startX; x < endX; x++) {
+        const index = rowOffset + x
+        if (cleanedMask[index]) cleanedAreaPixels++
+        if (blockedMask[index]) blockedAreaPixels++
+      }
+    }
+  } else {
+    // ROI가 없으면 전체 영역
+    cleanedAreaPixels = countMaskPixels(cleanedMask)
+    blockedAreaPixels = countMaskPixels(blockedMask)
+  }
   
-  const cleanedArea = cleanedAreaHoles
-  const blockedArea = blockedAreaHoles
+  // 미분류 후보 면적 (체크박스가 켜져있으면 0)
+  let missedPixels = 0
+  if (!state.convertMissedToCleaned && state.missedMask) {
+    if (state.roi) {
+      const startX = Math.max(0, Math.floor(state.roi.x))
+      const startY = Math.max(0, Math.floor(state.roi.y))
+      const endX = Math.min(width, Math.ceil(state.roi.x + state.roi.width))
+      const endY = Math.min(height, Math.ceil(state.roi.y + state.roi.height))
+      
+      for (let y = startY; y < endY; y++) {
+        const rowOffset = y * width
+        for (let x = startX; x < endX; x++) {
+          const index = rowOffset + x
+          if (state.missedMask[index]) missedPixels++
+        }
+      }
+    } else {
+      missedPixels = countMaskPixels(state.missedMask)
+    }
+  }
+  
+  // 청소율 계산: 전체 ROI 면적 기준
+  const inspectionArea = roiArea - missedPixels  // 검사 가능 면적 (미분류 제외)
+  
+  const cleanedArea = cleanedAreaPixels
+  const blockedArea = blockedAreaPixels
   const totalArea = roiArea
   const totalCount = holes.length
   
   const cleaningRateCount = totalCount ? (cleanedCount / totalCount) * 100 : 0
   const cleaningRateArea = inspectionArea > 0 ? (cleanedArea / inspectionArea) * 100 : 0
   
-  console.log('[Metrics Debug]', {
+  console.log('[Metrics Debug - Pixel-based Calculation]', {
     cleanedCount, blockedCount, totalCount,
-    cleanedAreaHoles, blockedAreaHoles, missedPixels, hexPixels,
-    canvasArea, roiArea, inspectionArea,
+    cleanedAreaPixels, blockedAreaPixels, missedPixels,
+    roiArea, inspectionArea,
     cleanedArea, blockedArea, totalArea,
     cleaningRateCount: cleaningRateCount.toFixed(1),
     cleaningRateArea: cleaningRateArea.toFixed(1)
   })
   
-  console.log(`[청소율 계산 공식]`)
-  console.log(`청소율 = (청소 완료 면적) / (총 검사 면적 - 미분류 후보 면적) × 100`)
-  console.log(`청소율 = ${cleanedArea.toLocaleString('ko-KR')} / (${roiArea.toLocaleString('ko-KR')} - ${missedPixels.toLocaleString('ko-KR')}) × 100`)
-  console.log(`청소율 = ${cleanedArea.toLocaleString('ko-KR')} / ${inspectionArea.toLocaleString('ko-KR')} × 100`)
+  console.log(`[청소율 계산 공식 - 전체 ROI 면적 기준]`)
+  console.log(`청소율 = (청소 완료 픽셀 면적) / (ROI 면적 - 미분류 후보 면적) × 100`)
+  console.log(`청소율 = ${cleanedArea.toLocaleString('ko-KR')} px / (${roiArea.toLocaleString('ko-KR')} px - ${missedPixels.toLocaleString('ko-KR')} px) × 100`)
+  console.log(`청소율 = ${cleanedArea.toLocaleString('ko-KR')} px / ${inspectionArea.toLocaleString('ko-KR')} px × 100`)
   console.log(`청소율 = ${cleaningRateArea.toFixed(1)}%`)
+  console.log(``)
+  console.log(`[면적 분석]`)
+  console.log(`총 ROI 면적: ${roiArea.toLocaleString('ko-KR')} px (100%)`)
+  console.log(`청소 완료 면적: ${cleanedArea.toLocaleString('ko-KR')} px (${(cleanedArea/roiArea*100).toFixed(2)}%)`)
+  console.log(`청소 필요 면적: ${blockedArea.toLocaleString('ko-KR')} px (${(blockedArea/roiArea*100).toFixed(2)}%)`)
+  console.log(`미분류 면적: ${missedPixels.toLocaleString('ko-KR')} px (${(missedPixels/roiArea*100).toFixed(2)}%)`)
+  console.log(`배경(육각형) 면적: ${(roiArea - cleanedArea - blockedArea - missedPixels).toLocaleString('ko-KR')} px (${((roiArea - cleanedArea - blockedArea - missedPixels)/roiArea*100).toFixed(2)}%)`)
 
   state.metrics = {
     totalCount,
