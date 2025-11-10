@@ -763,6 +763,49 @@ const drawROIHighlight = (ctx) => {
   ctx.restore()
 }
 
+// Helper function to check if a virtual hole overlaps with green masks
+const virtualHoleOverlapsGreenMask = (vhole, width, height, hexMask, missedMask) => {
+  if (!hexMask && !missedMask) return false
+  
+  // Check a circular area around the virtual hole center
+  const centerX = Math.round(vhole.x)
+  const centerY = Math.round(vhole.y)
+  const checkRadius = Math.round(vhole.radius * 0.8) // Same radius used for drawing
+  const radiusSquared = checkRadius * checkRadius
+  
+  // Sample pixels in the circular area
+  let greenPixelCount = 0
+  let totalSampled = 0
+  
+  for (let dy = -checkRadius; dy <= checkRadius; dy++) {
+    const y = centerY + dy
+    if (y < 0 || y >= height) continue
+    
+    const dySquared = dy * dy
+    const rowOffset = y * width
+    
+    for (let dx = -checkRadius; dx <= checkRadius; dx++) {
+      const x = centerX + dx
+      if (x < 0 || x >= width) continue
+      
+      // Check if pixel is within the circle
+      if (dx * dx + dySquared <= radiusSquared) {
+        const index = rowOffset + x
+        totalSampled++
+        
+        // Check if this pixel is part of hex mask or missed mask
+        if ((hexMask && hexMask[index] > 0) || (missedMask && missedMask[index] > 0)) {
+          greenPixelCount++
+        }
+      }
+    }
+  }
+  
+  // If more than 30% of the virtual hole area overlaps with green masks, skip drawing it
+  const overlapRatio = totalSampled > 0 ? greenPixelCount / totalSampled : 0
+  return overlapRatio > 0.3
+}
+
 const drawHoleOverlay = () => {
   const { overlayCanvas } = elements
   if (!overlayCanvas) return
@@ -782,7 +825,20 @@ const drawHoleOverlay = () => {
     ctx.stroke()
   })
 
+  // Get canvas dimensions and masks for overlap checking
+  const width = overlayCanvas.width
+  const height = overlayCanvas.height
+  const { hexMask, missedMask } = state
+
+  // Draw virtual holes, but skip those that overlap with green masks
+  let skippedVirtualHoles = 0
   ;(state.virtualHoles ?? []).forEach((vhole) => {
+    // Check if this virtual hole overlaps with green areas
+    if (virtualHoleOverlapsGreenMask(vhole, width, height, hexMask, missedMask)) {
+      skippedVirtualHoles++
+      return // Skip drawing this virtual hole
+    }
+    
     ctx.beginPath()
     ctx.strokeStyle = 'rgba(147, 51, 234, 0.9)'
     ctx.fillStyle = 'rgba(147, 51, 234, 0.3)'
@@ -793,6 +849,11 @@ const drawHoleOverlay = () => {
     ctx.stroke()
     ctx.setLineDash([])
   })
+  
+  // Log how many virtual holes were skipped to avoid green overlap
+  if (skippedVirtualHoles > 0) {
+    console.log(`[Virtual Holes] Skipped ${skippedVirtualHoles} virtual holes that overlapped with green areas`)
+  }
 
   ctx.restore()
 }
