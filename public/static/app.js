@@ -1147,8 +1147,26 @@ const downloadOverlayImage = () => {
 
   log('화면에 표시된 오버레이를 다운로드하는 중...')
 
-  // Simply download the existing overlay canvas as-is
-  overlayCanvas.toBlob((blob) => {
+  // Create a new canvas with white background to make colors visible
+  const exportCanvas = document.createElement('canvas')
+  exportCanvas.width = overlayCanvas.width
+  exportCanvas.height = overlayCanvas.height
+  const exportCtx = exportCanvas.getContext('2d')
+  
+  if (!exportCtx) {
+    log('내보내기 캔버스 생성 실패', 'error')
+    return
+  }
+
+  // Draw white background first (to make semi-transparent colors visible)
+  exportCtx.fillStyle = 'white'
+  exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height)
+  
+  // Draw the overlay canvas on top
+  exportCtx.drawImage(overlayCanvas, 0, 0)
+
+  // Convert to blob and download
+  exportCanvas.toBlob((blob) => {
     if (!blob) {
       log('이미지 변환에 실패했습니다.', 'error')
       return
