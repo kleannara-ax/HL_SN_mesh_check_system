@@ -644,18 +644,19 @@ const drawMaskLayers = () => {
   const imageData = ctx.createImageData(width, height)
   const data = imageData.data
 
-  if (hexMask && hexMask.length === totalPixels) {
-    for (let i = 0; i < totalPixels; i++) {
-      if (hexMask[i] > 0) {
-        const idx = i * 4
-        data[idx] = Math.max(data[idx], 255)      // R: Yellow
-        data[idx + 1] = Math.max(data[idx + 1], 220)  // G: Yellow
-        data[idx + 2] = Math.max(data[idx + 2], 0)    // B: Yellow
-        data[idx + 3] = Math.max(data[idx + 3], 110)
-        coverMask[i] = 1
-      }
-    }
-  }
+  // 노란색 hexMask 렌더링 제거 - 파란색/빨간색 점만 표시
+  // if (hexMask && hexMask.length === totalPixels) {
+  //   for (let i = 0; i < totalPixels; i++) {
+  //     if (hexMask[i] > 0) {
+  //       const idx = i * 4
+  //       data[idx] = Math.max(data[idx], 255)      // R: Yellow
+  //       data[idx + 1] = Math.max(data[idx + 1], 220)  // G: Yellow
+  //       data[idx + 2] = Math.max(data[idx + 2], 0)    // B: Yellow
+  //       data[idx + 3] = Math.max(data[idx + 3], 110)
+  //       coverMask[i] = 1
+  //     }
+  //   }
+  // }
 
   if (missedMask && missedMask.length === totalPixels) {
     for (let i = 0; i < totalPixels; i++) {

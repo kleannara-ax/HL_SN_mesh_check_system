@@ -354,11 +354,12 @@ const Home = () => (
               <dt class="font-semibold text-slate-900">청소 필요</dt>
               <dd class="text-xs text-slate-600">회색으로 보이는 매쉬 구멍</dd>
             </div>
-            <div class="flex items-center gap-3">
+            {/* 노란색 격자 범례 제거 - 파란색/빨간색 점만 표시 */}
+            {/* <div class="flex items-center gap-3">
               <span class="h-3 w-3 rounded-full bg-yellow-400"></span>
               <dt class="font-semibold text-slate-900">제외 격자</dt>
               <dd class="text-xs text-slate-600">육각형 철 구조(청소율 계산 제외)</dd>
-            </div>
+            </div> */}
             <div class="flex items-center gap-3">
               <span class="h-3 w-3 rounded-full bg-lime-300"></span>
               <dt class="font-semibold text-slate-900">미검출 후보</dt>
