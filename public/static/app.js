@@ -344,6 +344,8 @@ const recalculateMetrics = () => {
     missedArea: missedPixels,
     cleaningRateArea
   }
+  
+  return state.metrics
 }
 
 const formatTimestampLabel = (date = new Date()) => {
@@ -895,7 +897,8 @@ const renderOverlay = () => {
       // 기존 results에서 fromMissed가 아닌 것만 유지하고 새로 생성된 점 추가
       const originalHoles = (state.results || []).filter(h => !h.fromMissed)
       state.results = [...originalHoles, ...missedHoles]
-      // 메트릭 재계산
+      // 메트릭 재계산 (recalculateMetrics 호출 필요!)
+      state.metrics = recalculateMetrics()
       updateStats()
     }
   } else {
@@ -904,6 +907,7 @@ const renderOverlay = () => {
       const originalHoles = state.results.filter(h => !h.fromMissed)
       if (originalHoles.length !== state.results.length) {
         state.results = originalHoles
+        state.metrics = recalculateMetrics()
         updateStats()
       }
     }
