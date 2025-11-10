@@ -1662,27 +1662,69 @@ const setupEventListeners = () => {
   elements.overlayCanvas?.addEventListener('pointerleave', handleOverlayPointerLeave)
   elements.overlayCanvas?.addEventListener('pointercancel', handleOverlayPointerLeave)
 
-  elements.saveInspection?.addEventListener('click', () => {
+  elements.saveInspection?.addEventListener('click', async () => {
     if (!state.results || !state.results.length) {
       log('저장할 분석 결과가 없습니다.', 'warning')
       return
     }
 
     const title = ensureInspectionTitle()
+    const metrics = state.metrics || defaultMetrics()
+
+    // Disable save button during request
+    if (elements.saveInspection) {
+      elements.saveInspection.disabled = true
+      elements.saveInspection.textContent = '저장 중...'
+    }
 
     const payload = {
       title,
-      total: state.results.length,
-      cleaned: state.results.filter((item) => item.status === 'cleaned').length,
-      blocked: state.results.filter((item) => item.status === 'blocked').length,
-      cleaningRate: elements.cleaningRate?.textContent ?? '0%',
-      thresholds: { ...state.thresholds },
-      manualEdits: state.manualEdits,
-      timestamp: new Date().toISOString()
+      totalHoles: metrics.totalCount,
+      cleanedHoles: metrics.cleanedCount,
+      blockedHoles: metrics.blockedCount,
+      totalArea: metrics.totalArea,
+      cleanedArea: metrics.cleanedArea,
+      blockedArea: metrics.blockedArea,
+      missedArea: metrics.missedArea,
+      cleaningRateArea: metrics.cleaningRateArea,
+      cleaningRateCount: metrics.cleaningRateCount,
+      thresholdDark: state.thresholds.dark,
+      thresholdGray: state.thresholds.gray,
+      thresholdArea: state.thresholds.areaPercentile,
+      manualEditsCount: state.manualEdits.length,
+      roiX: state.roi?.x || null,
+      roiY: state.roi?.y || null,
+      roiWidth: state.roi?.width || null,
+      roiHeight: state.roi?.height || null,
+      virtualHolesCount: state.virtualHoles?.length || 0
     }
 
-    log(`"${title}" 검사 결과 저장 API 연동은 다음 단계에서 구현됩니다.`)
-    console.info('Inspection payload preview', payload)
+    try {
+      const response = await fetch('/api/inspections', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        log(`✅ "${title}" 검사 결과가 성공적으로 저장되었습니다. (ID: ${result.id})`, 'info')
+      } else {
+        log(`❌ 저장 실패: ${result.error}`, 'error')
+      }
+    } catch (error) {
+      console.error('Save error:', error)
+      log(`❌ 저장 중 오류가 발생했습니다: ${error.message}`, 'error')
+    } finally {
+      // Re-enable save button
+      if (elements.saveInspection) {
+        elements.saveInspection.disabled = false
+        elements.saveInspection.textContent = '검사 결과 저장'
+      }
+    }
   })
 
   elements.downloadOverlayButton?.addEventListener('click', () => {

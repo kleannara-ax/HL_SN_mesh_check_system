@@ -2,7 +2,11 @@ import { Hono } from 'hono'
 import { serveStatic } from 'hono/cloudflare-workers'
 import { renderer } from './renderer'
 
-const app = new Hono()
+type Bindings = {
+  DB: D1Database
+}
+
+const app = new Hono<{ Bindings: Bindings }>()
 
 app.use('/static/*', serveStatic({ root: './public' }))
 app.use(renderer)
@@ -567,6 +571,137 @@ const HistoryPage = () => {
   )
 }
 
+// API Routes for inspections
+app.post('/api/inspections', async (c) => {
+  try {
+    const body = await c.req.json()
+    
+    const {
+      title,
+      totalHoles,
+      cleanedHoles,
+      blockedHoles,
+      totalArea,
+      cleanedArea,
+      blockedArea,
+      missedArea,
+      cleaningRateArea,
+      cleaningRateCount,
+      thresholdDark,
+      thresholdGray,
+      thresholdArea,
+      manualEditsCount,
+      roiX,
+      roiY,
+      roiWidth,
+      roiHeight,
+      virtualHolesCount
+    } = body
+
+    const result = await c.env.DB.prepare(`
+      INSERT INTO inspections (
+        title, total_holes, cleaned_holes, blocked_holes,
+        total_area, cleaned_area, blocked_area, missed_area,
+        cleaning_rate_area, cleaning_rate_count,
+        threshold_dark, threshold_gray, threshold_area,
+        manual_edits_count, roi_x, roi_y, roi_width, roi_height,
+        virtual_holes_count
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      title,
+      totalHoles,
+      cleanedHoles,
+      blockedHoles,
+      totalArea,
+      cleanedArea,
+      blockedArea,
+      missedArea,
+      cleaningRateArea,
+      cleaningRateCount,
+      thresholdDark,
+      thresholdGray,
+      thresholdArea,
+      manualEditsCount,
+      roiX,
+      roiY,
+      roiWidth,
+      roiHeight,
+      virtualHolesCount
+    ).run()
+
+    return c.json({
+      success: true,
+      id: result.meta.last_row_id,
+      message: '검사 결과가 저장되었습니다.'
+    })
+  } catch (error) {
+    console.error('Error saving inspection:', error)
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
+    }, 500)
+  }
+})
+
+app.get('/api/inspections', async (c) => {
+  try {
+    const limit = parseInt(c.req.query('limit') || '50')
+    const offset = parseInt(c.req.query('offset') || '0')
+
+    const { results } = await c.env.DB.prepare(`
+      SELECT * FROM inspections
+      ORDER BY created_at DESC
+      LIMIT ? OFFSET ?
+    `).bind(limit, offset).all()
+
+    const { results: countResults } = await c.env.DB.prepare(`
+      SELECT COUNT(*) as total FROM inspections
+    `).all()
+
+    return c.json({
+      success: true,
+      data: results,
+      total: countResults[0]?.total || 0,
+      limit,
+      offset
+    })
+  } catch (error) {
+    console.error('Error fetching inspections:', error)
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
+    }, 500)
+  }
+})
+
+app.get('/api/inspections/:id', async (c) => {
+  try {
+    const id = c.req.param('id')
+    const result = await c.env.DB.prepare(`
+      SELECT * FROM inspections WHERE id = ?
+    `).bind(id).first()
+
+    if (!result) {
+      return c.json({
+        success: false,
+        error: '검사 결과를 찾을 수 없습니다.'
+      }, 404)
+    }
+
+    return c.json({
+      success: true,
+      data: result
+    })
+  } catch (error) {
+    console.error('Error fetching inspection:', error)
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
+    }, 500)
+  }
+})
+
+// Page Routes
 app.get('/', (c) => c.render(<Home />))
 app.get('/history', (c) => c.render(<HistoryPage />))
 app.get('/healthz', (c) => c.json({ status: 'ok' }))
