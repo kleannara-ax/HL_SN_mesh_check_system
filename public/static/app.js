@@ -648,9 +648,9 @@ const drawMaskLayers = () => {
     for (let i = 0; i < totalPixels; i++) {
       if (hexMask[i] > 0) {
         const idx = i * 4
-        data[idx] = Math.max(data[idx], 24)
-        data[idx + 1] = Math.max(data[idx + 1], 180)
-        data[idx + 2] = Math.max(data[idx + 2], 92)
+        data[idx] = Math.max(data[idx], 255)      // R: Yellow
+        data[idx + 1] = Math.max(data[idx + 1], 220)  // G: Yellow
+        data[idx + 2] = Math.max(data[idx + 2], 0)    // B: Yellow
         data[idx + 3] = Math.max(data[idx + 3], 110)
         coverMask[i] = 1
       }
