@@ -419,10 +419,9 @@ const recalculateMetrics = () => {
   console.log(``)
   console.log(`[면적 분석]`)
   console.log(`총 ROI 면적: ${roiArea.toLocaleString('ko-KR')} px (100%)`)
-  console.log(`청소 완료 면적: ${cleanedArea.toLocaleString('ko-KR')} px (${(cleanedArea/roiArea*100).toFixed(2)}%)`)
-  console.log(`청소 필요 면적: ${blockedArea.toLocaleString('ko-KR')} px (${(blockedArea/roiArea*100).toFixed(2)}%)`)
+  console.log(`청소 완료 면적 (파란색 점): ${cleanedArea.toLocaleString('ko-KR')} px (${(cleanedArea/roiArea*100).toFixed(2)}%)`)
+  console.log(`청소 필요 면적 및 골격 제외 면적 (전체 - 파란색): ${blockedArea.toLocaleString('ko-KR')} px (${(blockedArea/roiArea*100).toFixed(2)}%)`)
   console.log(`미분류 면적: ${missedPixels.toLocaleString('ko-KR')} px (${(missedPixels/roiArea*100).toFixed(2)}%)`)
-  console.log(`배경(육각형) 면적: ${(roiArea - cleanedArea - blockedArea - missedPixels).toLocaleString('ko-KR')} px (${((roiArea - cleanedArea - blockedArea - missedPixels)/roiArea*100).toFixed(2)}%)`)
 
   state.metrics = {
     totalCount,

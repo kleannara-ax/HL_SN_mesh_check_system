@@ -433,7 +433,7 @@ const Home = () => (
                   <p id="cleanedArea" class="mt-2 text-2xl font-bold text-sky-300">0</p>
                 </div>
                 <div class="rounded-xl border border-rose-400/40 bg-rose-500/10 p-4 text-center">
-                  <p class="text-xs text-rose-700">청소 필요 면적</p>
+                  <p class="text-xs text-rose-700">청소 필요 면적 및 골격 제외 면적</p>
                   <p id="blockedArea" class="mt-2 text-2xl font-bold text-rose-300">0</p>
                 </div>
                 <div class="rounded-xl border border-lime-400/40 bg-lime-500/10 p-4 text-center">
