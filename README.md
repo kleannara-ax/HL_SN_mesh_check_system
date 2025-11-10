@@ -45,9 +45,12 @@ npm run deploy           # Cloudflare Pages 배포 파이프라인
 - `/healthz` : 간단한 상태 확인 JSON `{ status: "ok" }`
 
 ### API 라우트 (D1 데이터베이스)
-- `POST /api/inspections` : 검사 결과 저장
-  - Request body: `{ title, totalHoles, cleanedHoles, blockedHoles, totalArea, cleanedArea, blockedArea, missedArea, cleaningRateArea, cleaningRateCount, thresholdDark, thresholdGray, thresholdArea, manualEditsCount, roiX, roiY, roiWidth, roiHeight, virtualHolesCount }`
+- `POST /api/inspections` : 검사 결과 저장 (자동 호출)
+  - Request body: `{ title, totalHoles, cleanedHoles, blockedHoles, totalArea, cleanedArea, blockedArea, missedArea, cleaningRateArea, cleaningRateCount, thresholdDark, thresholdGray, thresholdArea, manualEditsCount, roiX, roiY, roiWidth, roiHeight, virtualHolesCount, overlayImage }`
   - Response: `{ success, id, message }`
+- `PUT /api/inspections/:id` : 검사 결과 업데이트 (자동 호출)
+  - Request body: POST와 동일
+  - Response: `{ success, message }`
 - `GET /api/inspections?limit=50&offset=0` : 검사 이력 조회 (페이징 지원)
   - Response: `{ success, data, total, limit, offset }`
 - `GET /api/inspections/:id` : 특정 검사 결과 상세 조회
@@ -130,13 +133,17 @@ npm run deploy           # Cloudflare Pages 배포 파이프라인
 
 ## 최근 업데이트
 - **2025-11-10 (최신)**: 
+  - ✅ **자동 저장 기능**: 이미지 업로드 시 분석 완료되면 자동으로 DB에 저장
+  - ✅ **실시간 업데이트**: ROI/임계값 변경 시 기존 레코드를 자동으로 UPDATE
+  - ✅ **오버레이 이미지 저장**: 분석 결과 캔버스를 base64로 변환하여 DB에 저장
+  - ✅ **검사 이력 상세 페이지**: `/history/:id`에서 오버레이 이미지와 상세 통계 표시
   - ✅ **탭 기반 UI 네비게이션 추가**: 3개 탭으로 구분하여 스크롤 최소화 (1. 업로드 & 설정, 2. 분석 결과, 3. 검사 이력)
   - ✅ **ROI 컨트롤을 Tab 2로 이동**: 분석 결과 페이지에서 직접 검사 영역 설정 가능
   - ✅ **업로드 파일명 표시 기능**: 파일 선택 시 "📎 파일명.jpg" 형식으로 표시 (초록색 강조)
   - ✅ **Cloudflare D1 데이터베이스 연동 완료**: 검사 결과 영구 저장 및 이력 조회 기능 구현
-  - ✅ **API 엔드포인트 3개 추가**: POST/GET 검사 결과 저장/조회
+  - ✅ **API 엔드포인트 4개 추가**: POST/PUT/GET 검사 결과 저장/업데이트/조회
   - ✅ 로컬 D1 SQLite 데이터베이스 자동 생성 및 마이그레이션 시스템
-  - ✅ 프론트엔드에서 저장 버튼 클릭 시 실제 DB에 저장되도록 구현
+  - ✅ 프론트엔드에서 자동으로 DB 저장 및 업데이트
 - **2025-11-09**: 
   - ✅ 투명 배경 오버레이 이미지 다운로드 기능 추가: 원본 사진 없이 점 위치만 투명 PNG로 내보내기
   - ✅ 가상 점(Virtual Holes) 탐지 기능 추가: 격자 패턴 분석으로 누락된 구멍을 보라색 점선 원으로 표시
