@@ -102,6 +102,7 @@ const Home = () => (
                 capture="environment"
                 class="w-full cursor-pointer rounded-lg border border-slate-300 bg-white/60 px-3 py-2 text-sm text-slate-700 focus:border-emerald-500 focus:outline-none"
               />
+              <span id="selectedFileName" class="text-xs text-slate-500 italic">선택된 파일 없음</span>
             </label>
             <div class="flex gap-3">
               <button
@@ -197,33 +198,6 @@ const Home = () => (
           </div>
 
           <div class="mt-6 space-y-3 rounded-xl border border-slate-200 bg-white/40 p-4">
-            <h3 class="text-sm font-semibold text-slate-700">검사 영역 지정 (ROI)</h3>
-            <p class="text-xs text-slate-600">
-              특정 영역만 집중적으로 분석하고 싶다면 “검사 영역 지정” 버튼을 누른 뒤 캔버스 위를 드래그하여 ROI를 설정하세요. 지정된
-              영역은 분석 시 자동으로 적용되며, 결과 통계와 청소율도 해당 영역으로 한정됩니다.
-            </p>
-            <div class="flex flex-wrap items-center gap-3">
-              <button
-                id="roiSelectButton"
-                type="button"
-                class="inline-flex items-center gap-2 rounded-lg border border-sky-400/70 px-3 py-2 text-xs font-semibold text-sky-700 transition hover:bg-sky-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-9000"
-                disabled
-              >
-                검사 영역 지정
-              </button>
-              <button
-                id="roiClearButton"
-                type="button"
-                class="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-9000"
-                disabled
-              >
-                영역 초기화
-              </button>
-              <span class="text-[11px] text-slate-9000">ROI를 변경한 뒤에는 “분석 시작”을 다시 실행해 주세요.</span>
-            </div>
-          </div>
-
-          <div class="mt-6 space-y-3 rounded-xl border border-slate-200 bg-white/40 p-4">
             <h3 class="text-sm font-semibold text-slate-700">미검출 후보 처리</h3>
             <p class="text-xs text-slate-600">
               형광 초록색으로 표시된 미검출 후보 영역을 청소 완료(파란색 점)로 일괄 변환할 수 있습니다. 
@@ -257,6 +231,33 @@ const Home = () => (
             원본 이미지 위에 분석 결과 오버레이를 겹쳐 표시합니다. 연두색 육각형은 제외된 격자, 형광 초록색 영역은 아직 점으로
             인식되지 않은 후보, 파란색 점은 청소 완료, 빨간색 점은 청소 필요를 의미합니다.
           </p>
+
+          <div class="mt-4 space-y-3 rounded-xl border border-slate-200 bg-emerald-50 p-4">
+            <h3 class="text-sm font-semibold text-slate-700">검사 영역 지정 (ROI)</h3>
+            <p class="text-xs text-slate-600">
+              특정 영역만 집중적으로 분석하고 싶다면 "검사 영역 지정" 버튼을 누른 뒤 캔버스 위를 드래그하여 ROI를 설정하세요.
+            </p>
+            <div class="flex flex-wrap items-center gap-3">
+              <button
+                id="roiSelectButton"
+                type="button"
+                class="inline-flex items-center gap-2 rounded-lg border border-sky-400/70 px-3 py-2 text-xs font-semibold text-sky-700 transition hover:bg-sky-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-500"
+                disabled
+              >
+                검사 영역 지정
+              </button>
+              <button
+                id="roiClearButton"
+                type="button"
+                class="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-500"
+                disabled
+              >
+                영역 초기화
+              </button>
+              <span class="text-[11px] text-slate-600">ROI를 변경한 뒤에는 "분석 시작"을 다시 실행해 주세요.</span>
+            </div>
+          </div>
+
           <div class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
             <div class="space-y-4">
               <div

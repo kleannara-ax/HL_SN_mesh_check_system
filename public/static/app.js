@@ -197,6 +197,12 @@ const resetWorkspace = () => {
   if (elements.imageInput) {
     elements.imageInput.value = ''
   }
+  // 파일명 표시 초기화
+  const fileNameDisplay = document.getElementById('selectedFileName')
+  if (fileNameDisplay) {
+    fileNameDisplay.textContent = '선택된 파일 없음'
+    fileNameDisplay.className = 'text-xs text-slate-500 italic'
+  }
   if (elements.convertMissedToCleaned) {
     elements.convertMissedToCleaned.checked = true  // 기본값: 체크됨
   }
@@ -2012,10 +2018,23 @@ const loadImageToCanvas = async (file, source = 'upload') => {
 const setupEventListeners = () => {
   elements.imageInput?.addEventListener('change', (event) => {
     const file = event.target.files?.[0]
+    const fileNameDisplay = document.getElementById('selectedFileName')
+    
     if (!file) {
       log('선택된 파일이 없습니다.', 'error')
+      if (fileNameDisplay) {
+        fileNameDisplay.textContent = '선택된 파일 없음'
+        fileNameDisplay.className = 'text-xs text-slate-500 italic'
+      }
       return
     }
+    
+    // 파일명 표시
+    if (fileNameDisplay) {
+      fileNameDisplay.textContent = `📎 ${file.name}`
+      fileNameDisplay.className = 'text-xs text-emerald-600 font-medium'
+    }
+    
     const preservedTitle = (elements.titleInput?.value ?? state.title ?? '').trim()
     resetWorkspace()
     if (preservedTitle) {
