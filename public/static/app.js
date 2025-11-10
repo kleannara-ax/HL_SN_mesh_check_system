@@ -35,7 +35,8 @@ const state = {
   selectingROI: false,
   selectionStart: null,
   selectionPreview: null,
-  convertMissedToCleaned: true  // 기본값: 체크됨
+  convertMissedToCleaned: true,  // 기본값: 체크됨
+  currentInspectionId: null  // 현재 검사 레코드 ID (자동 저장용)
 }
 
 const elements = {}
@@ -1612,6 +1613,89 @@ const classifyComponents = (components, width, height, thresholds) => {
   return { holes, hexMask, areaThreshold }
 }
 
+// 오버레이 캔버스를 base64로 변환
+const getOverlayImageBase64 = () => {
+  const { overlayCanvas } = elements
+  if (!overlayCanvas) return null
+  
+  try {
+    // PNG로 인코딩하여 base64 반환
+    return overlayCanvas.toDataURL('image/png')
+  } catch (error) {
+    console.error('오버레이 이미지 변환 실패:', error)
+    return null
+  }
+}
+
+// 자동 저장 함수
+const autoSaveInspection = async () => {
+  if (!state.results || !state.results.length) {
+    return
+  }
+  
+  const metrics = state.metrics
+  const overlayImage = getOverlayImageBase64()
+  
+  const data = {
+    title: state.title || `검사_${formatTimestampLabel()}`,
+    totalHoles: metrics.totalCount,
+    cleanedHoles: metrics.cleanedCount,
+    blockedHoles: metrics.blockedCount,
+    totalArea: metrics.totalArea,
+    cleanedArea: metrics.cleanedArea,
+    blockedArea: metrics.blockedArea,
+    missedArea: metrics.missedArea,
+    cleaningRateArea: metrics.cleaningRateArea,
+    cleaningRateCount: metrics.cleaningRateCount,
+    thresholdDark: state.thresholds.dark,
+    thresholdGray: state.thresholds.gray,
+    thresholdArea: state.thresholds.areaPercentile,
+    manualEditsCount: state.manualEdits.length,
+    roiX: state.roi?.x ?? null,
+    roiY: state.roi?.y ?? null,
+    roiWidth: state.roi?.width ?? null,
+    roiHeight: state.roi?.height ?? null,
+    virtualHolesCount: state.virtualHoles?.length ?? 0,
+    overlayImage: overlayImage
+  }
+  
+  try {
+    // 기존 레코드가 있으면 UPDATE, 없으면 INSERT
+    if (state.currentInspectionId) {
+      const response = await fetch(`/api/inspections/${state.currentInspectionId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        console.log('검사 결과 업데이트 완료:', result)
+        log(`검사 결과가 자동 업데이트되었습니다 (ID: ${state.currentInspectionId})`, 'info')
+      } else {
+        console.error('검사 결과 업데이트 실패:', await response.text())
+      }
+    } else {
+      const response = await fetch('/api/inspections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        state.currentInspectionId = result.id
+        console.log('검사 결과 저장 완료:', result)
+        log(`검사 결과가 자동 저장되었습니다 (ID: ${result.id})`, 'info')
+      } else {
+        console.error('검사 결과 저장 실패:', await response.text())
+      }
+    }
+  } catch (error) {
+    console.error('자동 저장 중 오류 발생:', error)
+  }
+}
+
 const downloadOverlayImage = () => {
   if (!state.results || !state.results.length) {
     log('다운로드할 분석 결과가 없습니다.', 'warning')
@@ -1851,6 +1935,9 @@ const analyzeMesh = async () => {
     }
     
     log('분석이 완료되었습니다. 필요 시 수동 교정을 진행하세요.')
+    
+    // 자동 저장 로직
+    await autoSaveInspection()
   } catch (error) {
     console.error(error)
     log(`분석 중 오류가 발생했습니다: ${error.message}`, 'error')
@@ -2259,7 +2346,7 @@ const loadInspectionHistory = async () => {
     
     if (result.success && result.data && result.data.length > 0) {
       historyList.innerHTML = result.data.map(inspection => `
-        <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+        <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 transition hover:border-emerald-500 hover:shadow-md">
           <div class="flex items-start justify-between">
             <div class="flex-1">
               <h3 class="font-semibold text-slate-900">${inspection.title || '제목 없음'}</h3>
@@ -2283,6 +2370,14 @@ const loadInspectionHistory = async () => {
               <p class="font-semibold text-rose-600">${inspection.blocked_holes}</p>
               <p class="text-slate-600">청소 필요</p>
             </div>
+          </div>
+          <div class="mt-3 flex justify-end">
+            <a href="/history/${inspection.id}" class="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-500">
+              상세 보기
+              <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+              </svg>
+            </a>
           </div>
         </div>
       `).join('')

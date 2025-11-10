@@ -19,6 +19,141 @@ const AnalyticsCard = ({ title, value, description }: { title: string; value: st
   </div>
 )
 
+const InspectionDetail = ({ inspection }: { inspection: any }) => (
+  <div class="min-h-screen bg-slate-50 text-slate-900">
+    <div class="border-b border-slate-200 bg-white">
+      <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-6">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wide text-emerald-600">검사 결과 상세</p>
+          <h1 class="text-2xl font-bold text-slate-900">{inspection.title || '제목 없음'}</h1>
+          <p class="mt-1 text-sm text-slate-600">
+            검사 시각: {new Date(inspection.created_at).toLocaleString('ko-KR')}
+          </p>
+        </div>
+        <a
+          href="/"
+          class="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-emerald-500 hover:text-emerald-700"
+        >
+          ← 대시보드로 돌아가기
+        </a>
+      </div>
+    </div>
+
+    <main class="mx-auto max-w-6xl space-y-6 px-4 py-10">
+      {/* 오버레이 이미지 */}
+      {inspection.overlay_image && (
+        <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
+          <h2 class="text-lg font-semibold text-slate-900">분석 결과 시각화</h2>
+          <p class="mt-1 text-sm text-slate-600">저장된 오버레이 이미지를 확인할 수 있습니다.</p>
+          <div class="mt-4 overflow-hidden rounded-xl border border-slate-200">
+            <img
+              src={inspection.overlay_image}
+              alt="검사 결과 오버레이"
+              class="w-full"
+            />
+          </div>
+        </section>
+      )}
+
+      {/* 통계 섹션 */}
+      <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
+        <h2 class="text-lg font-semibold text-slate-900">검사 통계</h2>
+        <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div class="rounded-xl border border-emerald-500/30 bg-emerald-50 p-4 text-center">
+            <p class="text-xs font-medium uppercase tracking-wide text-emerald-700">청소율 (면적)</p>
+            <p class="mt-2 text-3xl font-bold text-emerald-700">{inspection.cleaning_rate_area.toFixed(1)}%</p>
+          </div>
+          <div class="rounded-xl border border-sky-500/30 bg-sky-50 p-4 text-center">
+            <p class="text-xs font-medium uppercase tracking-wide text-sky-700">청소율 (개수)</p>
+            <p class="mt-2 text-3xl font-bold text-sky-700">{inspection.cleaning_rate_count.toFixed(1)}%</p>
+          </div>
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-center">
+            <p class="text-xs font-medium uppercase tracking-wide text-slate-700">총 구멍 수</p>
+            <p class="mt-2 text-3xl font-bold text-slate-900">{inspection.total_holes}</p>
+          </div>
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-center">
+            <p class="text-xs font-medium uppercase tracking-wide text-slate-700">가상 구멍</p>
+            <p class="mt-2 text-3xl font-bold text-purple-600">{inspection.virtual_holes_count || 0}</p>
+          </div>
+        </div>
+
+        <div class="mt-4 grid gap-4 sm:grid-cols-3">
+          <div class="rounded-xl border border-sky-400/40 bg-sky-50 p-4 text-center">
+            <p class="text-xs font-medium text-sky-700">청소 완료</p>
+            <p class="mt-2 text-2xl font-bold text-sky-700">{inspection.cleaned_holes}</p>
+            <p class="mt-1 text-xs text-slate-600">{inspection.cleaned_area.toLocaleString('ko-KR')} px²</p>
+          </div>
+          <div class="rounded-xl border border-rose-400/40 bg-rose-50 p-4 text-center">
+            <p class="text-xs font-medium text-rose-700">청소 필요</p>
+            <p class="mt-2 text-2xl font-bold text-rose-700">{inspection.blocked_holes}</p>
+            <p class="mt-1 text-xs text-slate-600">{inspection.blocked_area.toLocaleString('ko-KR')} px²</p>
+          </div>
+          <div class="rounded-xl border border-lime-400/40 bg-lime-50 p-4 text-center">
+            <p class="text-xs font-medium text-lime-700">미분류 후보</p>
+            <p class="mt-2 text-2xl font-bold text-lime-700">{inspection.missed_area.toLocaleString('ko-KR')} px²</p>
+            <p class="mt-1 text-xs text-slate-600">총 면적의 {(inspection.missed_area / inspection.total_area * 100).toFixed(1)}%</p>
+          </div>
+        </div>
+      </section>
+
+      {/* 분석 설정 */}
+      <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
+        <h2 class="text-lg font-semibold text-slate-900">분석 설정</h2>
+        <div class="mt-4 grid gap-4 sm:grid-cols-2">
+          <div>
+            <h3 class="text-sm font-semibold text-slate-700">임계값 설정</h3>
+            <dl class="mt-2 space-y-1 text-sm">
+              <div class="flex justify-between">
+                <dt class="text-slate-600">청소 완료(검정) 기준:</dt>
+                <dd class="font-semibold text-slate-900">≤ {inspection.threshold_dark}</dd>
+              </div>
+              <div class="flex justify-between">
+                <dt class="text-slate-600">청소 필요(회색) 상한:</dt>
+                <dd class="font-semibold text-slate-900">≤ {inspection.threshold_gray}</dd>
+              </div>
+              <div class="flex justify-between">
+                <dt class="text-slate-600">구멍 면적 필터:</dt>
+                <dd class="font-semibold text-slate-900">P{inspection.threshold_area} (상위 {100 - inspection.threshold_area}%)</dd>
+              </div>
+            </dl>
+          </div>
+          <div>
+            <h3 class="text-sm font-semibold text-slate-700">ROI 설정</h3>
+            {inspection.roi_x !== null ? (
+              <dl class="mt-2 space-y-1 text-sm">
+                <div class="flex justify-between">
+                  <dt class="text-slate-600">X 좌표:</dt>
+                  <dd class="font-semibold text-slate-900">{Math.round(inspection.roi_x)} px</dd>
+                </div>
+                <div class="flex justify-between">
+                  <dt class="text-slate-600">Y 좌표:</dt>
+                  <dd class="font-semibold text-slate-900">{Math.round(inspection.roi_y)} px</dd>
+                </div>
+                <div class="flex justify-between">
+                  <dt class="text-slate-600">크기:</dt>
+                  <dd class="font-semibold text-slate-900">{Math.round(inspection.roi_width)} × {Math.round(inspection.roi_height)} px</dd>
+                </div>
+              </dl>
+            ) : (
+              <p class="mt-2 text-sm text-slate-600">ROI가 설정되지 않았습니다 (전체 영역 분석)</p>
+            )}
+          </div>
+        </div>
+        {inspection.manual_edits_count > 0 && (
+          <div class="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-3">
+            <p class="text-sm font-semibold text-amber-900">수동 교정 횟수: {inspection.manual_edits_count}회</p>
+            <p class="mt-1 text-xs text-amber-700">사용자가 수동으로 구멍 상태를 변경한 횟수입니다.</p>
+          </div>
+        )}
+      </section>
+    </main>
+
+    <footer class="border-t border-slate-200 bg-white py-6 text-center text-xs text-slate-600">
+      ⓒ {new Date().getFullYear()} Mesh Cleanliness Inspector — Cloudflare Pages & Hono
+    </footer>
+  </div>
+)
+
 const Home = () => (
   <div class="min-h-screen bg-white text-slate-900">
     <div class="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-10 lg:flex-row">
@@ -776,9 +911,132 @@ app.get('/api/inspections/:id', async (c) => {
   }
 })
 
+// Update inspection endpoint
+app.put('/api/inspections/:id', async (c) => {
+  try {
+    const id = c.req.param('id')
+    const body = await c.req.json()
+    
+    const {
+      title,
+      totalHoles,
+      cleanedHoles,
+      blockedHoles,
+      totalArea,
+      cleanedArea,
+      blockedArea,
+      missedArea,
+      cleaningRateArea,
+      cleaningRateCount,
+      thresholdDark,
+      thresholdGray,
+      thresholdArea,
+      manualEditsCount,
+      roiX,
+      roiY,
+      roiWidth,
+      roiHeight,
+      virtualHolesCount,
+      overlayImage
+    } = body
+
+    const result = await c.env.DB.prepare(`
+      UPDATE inspections SET
+        title = ?,
+        total_holes = ?,
+        cleaned_holes = ?,
+        blocked_holes = ?,
+        total_area = ?,
+        cleaned_area = ?,
+        blocked_area = ?,
+        missed_area = ?,
+        cleaning_rate_area = ?,
+        cleaning_rate_count = ?,
+        threshold_dark = ?,
+        threshold_gray = ?,
+        threshold_area = ?,
+        manual_edits_count = ?,
+        roi_x = ?,
+        roi_y = ?,
+        roi_width = ?,
+        roi_height = ?,
+        virtual_holes_count = ?,
+        overlay_image = ?,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).bind(
+      title,
+      totalHoles,
+      cleanedHoles,
+      blockedHoles,
+      totalArea,
+      cleanedArea,
+      blockedArea,
+      missedArea,
+      cleaningRateArea,
+      cleaningRateCount,
+      thresholdDark,
+      thresholdGray,
+      thresholdArea,
+      manualEditsCount,
+      roiX,
+      roiY,
+      roiWidth,
+      roiHeight,
+      virtualHolesCount,
+      overlayImage,
+      id
+    ).run()
+
+    return c.json({
+      success: true,
+      message: '검사 결과가 업데이트되었습니다.'
+    })
+  } catch (error) {
+    console.error('Error updating inspection:', error)
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
+    }, 500)
+  }
+})
+
 // Page Routes
 app.get('/', (c) => c.render(<Home />))
 app.get('/history', (c) => c.render(<HistoryPage />))
+app.get('/history/:id', async (c) => {
+  const id = c.req.param('id')
+  
+  try {
+    const result = await c.env.DB.prepare(`
+      SELECT * FROM inspections WHERE id = ?
+    `).bind(id).first()
+    
+    if (!result) {
+      return c.html(`
+        <div class="min-h-screen flex items-center justify-center bg-slate-50">
+          <div class="text-center">
+            <h1 class="text-2xl font-bold text-slate-900">검사 결과를 찾을 수 없습니다</h1>
+            <a href="/" class="mt-4 inline-block text-emerald-600 hover:underline">대시보드로 돌아가기</a>
+          </div>
+        </div>
+      `)
+    }
+    
+    return c.render(<InspectionDetail inspection={result as any} />)
+  } catch (error) {
+    console.error('Error fetching inspection detail:', error)
+    return c.html(`
+      <div class="min-h-screen flex items-center justify-center bg-slate-50">
+        <div class="text-center">
+          <h1 class="text-2xl font-bold text-rose-600">오류가 발생했습니다</h1>
+          <p class="mt-2 text-slate-600">${error instanceof Error ? error.message : '알 수 없는 오류'}</p>
+          <a href="/" class="mt-4 inline-block text-emerald-600 hover:underline">대시보드로 돌아가기</a>
+        </div>
+      </div>
+    `)
+  }
+})
 app.get('/healthz', (c) => c.json({ status: 'ok' }))
 
 export default app
