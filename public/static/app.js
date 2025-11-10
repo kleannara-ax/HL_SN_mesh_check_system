@@ -1058,6 +1058,159 @@ const applyROIMask = (mask, width, height, roi) => {
   }
 }
 
+// 육각형 패턴 감지 함수
+const isHexagonalPattern = (pixels, minX, maxX, minY, maxY, area) => {
+  const width = maxX - minX + 1
+  const height = maxY - minY + 1
+  
+  // 1. 종횡비 검사: 육각형은 대략 1:1 비율 (0.7 ~ 1.4 범위)
+  const aspectRatio = Math.max(width, height) / Math.min(width, height)
+  if (aspectRatio > 1.8) {
+    return false  // 너무 길쭉하면 육각형 아님
+  }
+  
+  // 2. 최소 크기 검사: 너무 작으면 육각형이 아닐 가능성 높음
+  if (area < 100) {
+    return false
+  }
+  
+  // 3. 면적 대비 경계 상자 비율: 육각형은 약 0.866 (√3/2)
+  // 하지만 실제로는 0.6 ~ 0.95 사이
+  const boundingBoxArea = width * height
+  const fillRatio = area / boundingBoxArea
+  if (fillRatio < 0.5 || fillRatio > 0.98) {
+    return false  // 너무 비어있거나 너무 꽉 차있으면 육각형 아님
+  }
+  
+  // 4. Convex Hull 근사 검사: 꼭지점 개수 확인
+  // 픽셀 목록을 좌표 배열로 변환
+  const points = pixels.map(idx => ({
+    x: idx % width,
+    y: Math.floor(idx / width)
+  }))
+  
+  if (points.length < 6) {
+    return false
+  }
+  
+  // Graham Scan을 사용한 Convex Hull 계산
+  const hull = computeConvexHull(points)
+  
+  // 육각형은 6개의 꼭지점을 가져야 함 (오차 범위: 5~8개)
+  if (hull.length < 5 || hull.length > 9) {
+    return false
+  }
+  
+  // 5. 둘레 대비 면적 비율 (Compactness)
+  // 육각형은 원에 가까운 모양이므로 compactness가 높음
+  const perimeter = calculatePerimeter(hull)
+  const compactness = (4 * Math.PI * area) / (perimeter * perimeter)
+  
+  // 육각형의 compactness는 약 0.9 정도 (원은 1.0)
+  if (compactness < 0.6) {
+    return false  // 너무 불규칙한 모양
+  }
+  
+  return true
+}
+
+// Convex Hull 계산 (Graham Scan 알고리즘)
+const computeConvexHull = (points) => {
+  if (points.length < 3) return points
+  
+  // 1. 가장 아래쪽, 왼쪽 점 찾기
+  let minPoint = points[0]
+  for (let i = 1; i < points.length; i++) {
+    if (points[i].y < minPoint.y || (points[i].y === minPoint.y && points[i].x < minPoint.x)) {
+      minPoint = points[i]
+    }
+  }
+  
+  // 2. 각도 기준으로 정렬
+  const sortedPoints = points.filter(p => p !== minPoint).sort((a, b) => {
+    const angleA = Math.atan2(a.y - minPoint.y, a.x - minPoint.x)
+    const angleB = Math.atan2(b.y - minPoint.y, b.x - minPoint.x)
+    if (angleA === angleB) {
+      const distA = (a.x - minPoint.x) ** 2 + (a.y - minPoint.y) ** 2
+      const distB = (b.x - minPoint.x) ** 2 + (b.y - minPoint.y) ** 2
+      return distA - distB
+    }
+    return angleA - angleB
+  })
+  
+  // 3. Graham Scan
+  const hull = [minPoint, sortedPoints[0]]
+  
+  for (let i = 1; i < sortedPoints.length; i++) {
+    let top = hull[hull.length - 1]
+    let nextTop = hull[hull.length - 2]
+    
+    while (hull.length > 1 && ccw(nextTop, top, sortedPoints[i]) <= 0) {
+      hull.pop()
+      top = hull[hull.length - 1]
+      nextTop = hull[hull.length - 2]
+    }
+    
+    hull.push(sortedPoints[i])
+  }
+  
+  // Douglas-Peucker 알고리즘으로 꼭지점 단순화
+  return simplifyPolygon(hull, 3.0)
+}
+
+// Counter-clockwise 검사
+const ccw = (a, b, c) => {
+  return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)
+}
+
+// Douglas-Peucker 알고리즘으로 다각형 단순화
+const simplifyPolygon = (points, epsilon) => {
+  if (points.length < 3) return points
+  
+  let dmax = 0
+  let index = 0
+  const end = points.length - 1
+  
+  for (let i = 1; i < end; i++) {
+    const d = perpendicularDistance(points[i], points[0], points[end])
+    if (d > dmax) {
+      index = i
+      dmax = d
+    }
+  }
+  
+  if (dmax > epsilon) {
+    const recResults1 = simplifyPolygon(points.slice(0, index + 1), epsilon)
+    const recResults2 = simplifyPolygon(points.slice(index), epsilon)
+    return recResults1.slice(0, -1).concat(recResults2)
+  } else {
+    return [points[0], points[end]]
+  }
+}
+
+// 점에서 선분까지의 수직 거리
+const perpendicularDistance = (point, lineStart, lineEnd) => {
+  const dx = lineEnd.x - lineStart.x
+  const dy = lineEnd.y - lineStart.y
+  
+  const numerator = Math.abs(dy * point.x - dx * point.y + lineEnd.x * lineStart.y - lineEnd.y * lineStart.x)
+  const denominator = Math.sqrt(dx * dx + dy * dy)
+  
+  return numerator / denominator
+}
+
+// 다각형 둘레 계산
+const calculatePerimeter = (points) => {
+  let perimeter = 0
+  for (let i = 0; i < points.length; i++) {
+    const next = (i + 1) % points.length
+    const dx = points[next].x - points[i].x
+    const dy = points[next].y - points[i].y
+    perimeter += Math.sqrt(dx * dx + dy * dy)
+  }
+  return perimeter
+}
+
 const buildMissedMask = (candidateMask, holes, width, height) => {
   if (!candidateMask || candidateMask.length !== width * height) {
     return null
@@ -1097,10 +1250,76 @@ const buildMissedMask = (candidateMask, holes, width, height) => {
     }
   }
 
+  // 미검출 영역에서 육각형 패턴 제거
+  // 1단계: 미검출 영역 찾기
+  const tempMissed = new Uint8Array(candidateMask.length)
   for (let i = 0; i < candidateMask.length; i++) {
     if (candidateMask[i] && !coverage[i]) {
-      missed[i] = 255
+      tempMissed[i] = 255
     }
+  }
+  
+  // 2단계: Connected Components 분석으로 각 영역 분리
+  const visited = new Uint8Array(candidateMask.length)
+  const hexagonalRegions = []
+  
+  for (let i = 0; i < tempMissed.length; i++) {
+    if (tempMissed[i] > 0 && !visited[i]) {
+      // BFS로 연결된 영역 찾기
+      const queue = [i]
+      const pixels = []
+      visited[i] = 1
+      let head = 0
+      let minX = width, maxX = 0, minY = height, maxY = 0
+      
+      while (head < queue.length) {
+        const current = queue[head++]
+        const y = Math.floor(current / width)
+        const x = current % width
+        pixels.push(current)
+        
+        minX = Math.min(minX, x)
+        maxX = Math.max(maxX, x)
+        minY = Math.min(minY, y)
+        maxY = Math.max(maxY, y)
+        
+        // 8방향 이웃 탐색
+        const neighbors = [
+          [-1, -1], [-1, 0], [-1, 1],
+          [0, -1], [0, 1],
+          [1, -1], [1, 0], [1, 1]
+        ]
+        
+        for (const [dy, dx] of neighbors) {
+          const ny = y + dy
+          const nx = x + dx
+          if (ny >= 0 && ny < height && nx >= 0 && nx < width) {
+            const neighbor = ny * width + nx
+            if (tempMissed[neighbor] > 0 && !visited[neighbor]) {
+              visited[neighbor] = 1
+              queue.push(neighbor)
+            }
+          }
+        }
+      }
+      
+      // 3단계: 육각형 패턴 감지
+      const isHexagonal = isHexagonalPattern(pixels, minX, maxX, minY, maxY, pixels.length)
+      
+      if (isHexagonal) {
+        hexagonalRegions.push({ pixels, minX, maxX, minY, maxY, area: pixels.length })
+        console.log(`[Hexagonal Pattern Detected] Area: ${pixels.length}px, BBox: ${maxX-minX+1}x${maxY-minY+1}`)
+      } else {
+        // 육각형이 아닌 영역만 missed에 추가
+        for (const pixelIdx of pixels) {
+          missed[pixelIdx] = 255
+        }
+      }
+    }
+  }
+  
+  if (hexagonalRegions.length > 0) {
+    console.log(`[Hexagonal Filter] Removed ${hexagonalRegions.length} hexagonal patterns from missed mask`)
   }
 
   return missed
