@@ -1139,125 +1139,15 @@ const downloadOverlayImage = () => {
     return
   }
 
-  const { meshCanvas } = elements
-  if (!meshCanvas) {
-    log('캔버스를 찾을 수 없습니다.', 'error')
+  const { overlayCanvas } = elements
+  if (!overlayCanvas) {
+    log('오버레이 캔버스를 찾을 수 없습니다.', 'error')
     return
   }
 
-  const width = meshCanvas.width
-  const height = meshCanvas.height
-  if (!width || !height) {
-    log('유효한 캔버스 크기가 없습니다.', 'error')
-    return
-  }
+  log('화면에 표시된 오버레이를 다운로드하는 중...')
 
-  log('투명 배경 오버레이 이미지를 생성하는 중...')
-
-  // Create temporary canvas for transparent overlay
-  const overlayCanvas = document.createElement('canvas')
-  overlayCanvas.width = width
-  overlayCanvas.height = height
-  const ctx = overlayCanvas.getContext('2d')
-  if (!ctx) {
-    log('오버레이 캔버스 컨텍스트를 생성하지 못했습니다.', 'error')
-    return
-  }
-
-  // Clear canvas (transparent background)
-  ctx.clearRect(0, 0, width, height)
-
-  // Draw mask layers (hex lattice and missed areas) - ENTIRE AREAS FIRST
-  const totalPixels = width * height
-  const { hexMask, missedMask } = state
-  
-  if (hexMask || missedMask) {
-    const imageData = ctx.createImageData(width, height)
-    const data = imageData.data
-    
-    let hexCount = 0
-    let missedCount = 0
-
-    // Draw hex lattice (green) - FULL AREA
-    if (hexMask && hexMask.length === totalPixels) {
-      for (let i = 0; i < totalPixels; i++) {
-        if (hexMask[i] > 0) {
-          hexCount++
-          const idx = i * 4
-          data[idx] = 24       // R
-          data[idx + 1] = 180  // G
-          data[idx + 2] = 92   // B
-          data[idx + 3] = 180  // A (more opaque for download)
-        }
-      }
-    }
-
-    // Draw missed mask (bright green) - FULL AREA, overwrites hex where overlapping
-    if (missedMask && missedMask.length === totalPixels) {
-      for (let i = 0; i < totalPixels; i++) {
-        if (missedMask[i] > 0) {
-          missedCount++
-          const idx = i * 4
-          data[idx] = 48       // R
-          data[idx + 1] = 255  // G
-          data[idx + 2] = 128  // B
-          data[idx + 3] = 220  // A (more opaque for download)
-        }
-      }
-    }
-
-    console.log('[Download] Hex pixels:', hexCount, 'Missed pixels:', missedCount)
-    ctx.putImageData(imageData, 0, 0)
-  }
-
-  // Draw regular holes (cleaned = blue, blocked = pink) ON TOP
-  ctx.save()
-  ctx.lineWidth = 2
-  
-  let cleanedCount = 0
-  let blockedCount = 0
-  
-  ;(state.results ?? []).forEach((hole) => {
-    if (hole.status === 'cleaned') {
-      cleanedCount++
-    } else {
-      blockedCount++
-    }
-    
-    ctx.beginPath()
-    if (hole.status === 'cleaned') {
-      ctx.strokeStyle = 'rgba(56, 189, 248, 1.0)'  // Sky blue
-      ctx.fillStyle = 'rgba(56, 189, 248, 0.6)'
-    } else {
-      ctx.strokeStyle = 'rgba(244, 114, 182, 1.0)'  // Pink
-      ctx.fillStyle = 'rgba(244, 114, 182, 0.6)'
-    }
-    ctx.arc(hole.x, hole.y, hole.radius * 0.9, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.stroke()
-  })
-  
-  console.log('[Download] Holes drawn - Cleaned:', cleanedCount, 'Blocked:', blockedCount)
-
-  // Draw virtual holes (purple dashed circles)
-  const virtualCount = (state.virtualHoles ?? []).length
-  ;(state.virtualHoles ?? []).forEach((vhole) => {
-    ctx.beginPath()
-    ctx.strokeStyle = 'rgba(147, 51, 234, 1.0)'  // Purple
-    ctx.fillStyle = 'rgba(147, 51, 234, 0.5)'
-    ctx.setLineDash([4, 4])  // Dashed border
-    ctx.lineWidth = 2
-    ctx.arc(vhole.x, vhole.y, vhole.radius * 0.8, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.stroke()
-    ctx.setLineDash([])  // Reset dash
-  })
-  
-  console.log('[Download] Virtual holes drawn:', virtualCount)
-
-  ctx.restore()
-
-  // Convert to blob and trigger download
+  // Simply download the existing overlay canvas as-is
   overlayCanvas.toBlob((blob) => {
     if (!blob) {
       log('이미지 변환에 실패했습니다.', 'error')
@@ -1275,7 +1165,7 @@ const downloadOverlayImage = () => {
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
 
-    log(`투명 배경 오버레이 이미지를 다운로드했습니다: ${a.download}`, 'info')
+    log(`오버레이 이미지를 다운로드했습니다: ${a.download}`, 'info')
   }, 'image/png')
 }
 
