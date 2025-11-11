@@ -2116,16 +2116,19 @@ const setupEventListeners = () => {
       return
     }
     
-    // 파일명 표시 및 로그 추가
-    if (fileNameDisplay) {
-      fileNameDisplay.textContent = `📎 ${file.name}`
-      fileNameDisplay.className = 'text-xs text-emerald-600 font-medium'
-    }
-    
     log(`✅ 이미지 업로드 완료: ${file.name}`, 'info')
     
     const preservedTitle = (elements.titleInput?.value ?? state.title ?? '').trim()
+    const preservedFileName = file.name  // 파일명 저장
+    
     resetWorkspace()
+    
+    // 파일명 표시 복원 (resetWorkspace 이후)
+    if (fileNameDisplay) {
+      fileNameDisplay.textContent = `📎 ${preservedFileName}`
+      fileNameDisplay.className = 'text-xs text-emerald-600 font-medium'
+    }
+    
     if (preservedTitle) {
       applyInspectionTitle(preservedTitle)
     }

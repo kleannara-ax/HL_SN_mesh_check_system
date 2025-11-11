@@ -216,7 +216,7 @@ const Home = () => (
                 class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-600 focus:border-emerald-500 focus:outline-none"
                 maxLength={80}
               />
-              <span class="text-xs font-normal text-slate-9000">미기재 시 업로드·촬영 시각이 자동으로 제목에 반영됩니다.</span>
+              <span class="text-xs font-normal text-slate-600">미기재 시 업로드·촬영 시각이 자동으로 제목에 반영됩니다.</span>
             </label>
             <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
               <h3 class="text-sm font-semibold text-slate-900">검사 목적</h3>
