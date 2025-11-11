@@ -798,16 +798,17 @@ const drawMaskLayers = () => {
     }
   }
 
-  const pinkAlpha = 45
-  for (let i = 0; i < totalPixels; i++) {
-    if (!coverMask[i]) {
-      const idx = i * 4
-      data[idx] = Math.max(data[idx], 255)
-      data[idx + 1] = Math.max(data[idx + 1], 105)
-      data[idx + 2] = Math.max(data[idx + 2], 180)
-      data[idx + 3] = Math.max(data[idx + 3], pinkAlpha)
-    }
-  }
+  // 핑크색 배경 제거 - 점이 없는 영역은 투명하게 유지
+  // const pinkAlpha = 45
+  // for (let i = 0; i < totalPixels; i++) {
+  //   if (!coverMask[i]) {
+  //     const idx = i * 4
+  //     data[idx] = Math.max(data[idx], 255)
+  //     data[idx + 1] = Math.max(data[idx + 1], 105)
+  //     data[idx + 2] = Math.max(data[idx + 2], 180)
+  //     data[idx + 3] = Math.max(data[idx + 3], pinkAlpha)
+  //   }
+  // }
 
   ctx.putImageData(imageData, 0, 0)
   drawROIHighlight(ctx)
