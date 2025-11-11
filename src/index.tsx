@@ -227,24 +227,20 @@ const Home = () => (
             </div>
           </div>
 
-          <div class="mt-6 space-y-4">
-            <div class="flex flex-col gap-2">
-              <label class="text-sm font-medium text-slate-700">검사 이미지 선택</label>
-              <div class="flex flex-wrap items-center gap-3">
-                <label class="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-emerald-500 hover:text-emerald-700">
-                  <span>파일 선택</span>
-                  <input
-                    id="imageInput"
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    class="hidden"
-                  />
-                </label>
-                <span id="selectedFileName" class="text-sm text-slate-500 italic">선택된 파일 없음</span>
-              </div>
-            </div>
-            <div class="flex flex-wrap gap-3">
+          <div class="mt-6 flex flex-col gap-2">
+            <label class="text-sm font-medium text-slate-700">검사 이미지 선택</label>
+            <div class="flex flex-wrap items-center gap-3">
+              <label class="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-emerald-500 hover:text-emerald-700">
+                <span>파일 선택</span>
+                <input
+                  id="imageInput"
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  class="hidden"
+                />
+              </label>
+              <span id="selectedFileName" class="text-sm text-slate-500 italic">선택된 파일 없음</span>
               <button
                 id="analyzeButton"
                 type="button"
