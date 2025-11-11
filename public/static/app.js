@@ -820,14 +820,14 @@ const drawROIHighlight = (ctx) => {
   ctx.save()
   
   if (roi && !state.selectingROI) {
-    ctx.fillStyle = 'rgba(14, 165, 233, 0.08)'
-    ctx.strokeStyle = 'rgba(14, 165, 233, 0.95)'
-    ctx.lineWidth = 3
+    ctx.fillStyle = 'rgba(255, 140, 0, 0.15)'
+    ctx.strokeStyle = 'rgba(255, 100, 0, 1.0)'
+    ctx.lineWidth = 4
     ctx.setLineDash([])
     ctx.fillRect(roi.x, roi.y, roi.width, roi.height)
     ctx.strokeRect(roi.x + 1.5, roi.y + 1.5, roi.width - 3, roi.height - 3)
     
-    ctx.fillStyle = 'rgba(14, 165, 233, 0.9)'
+    ctx.fillStyle = 'rgba(255, 100, 0, 0.95)'
     ctx.font = 'bold 14px system-ui, sans-serif'
     ctx.textBaseline = 'top'
     const label = `ROI: ${Math.round(roi.width)}×${Math.round(roi.height)}px`
@@ -841,15 +841,15 @@ const drawROIHighlight = (ctx) => {
   }
   
   if (preview && state.selectingROI) {
-    ctx.setLineDash([8, 4])
-    ctx.fillStyle = 'rgba(244, 114, 182, 0.15)'
-    ctx.strokeStyle = 'rgba(244, 114, 182, 1.0)'
-    ctx.lineWidth = 2
+    ctx.setLineDash([10, 5])
+    ctx.fillStyle = 'rgba(255, 215, 0, 0.20)'
+    ctx.strokeStyle = 'rgba(255, 165, 0, 1.0)'
+    ctx.lineWidth = 3
     ctx.fillRect(preview.x, preview.y, preview.width, preview.height)
     ctx.strokeRect(preview.x + 1, preview.y + 1, preview.width - 2, preview.height - 2)
     
     if (preview.width > 40 && preview.height > 30) {
-      ctx.fillStyle = 'rgba(244, 114, 182, 0.95)'
+      ctx.fillStyle = 'rgba(255, 165, 0, 0.95)'
       ctx.font = 'bold 13px system-ui, sans-serif'
       ctx.textBaseline = 'top'
       const label = `${Math.round(preview.width)}×${Math.round(preview.height)}px`
