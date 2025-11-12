@@ -410,7 +410,16 @@ const Home = () => (
                   <span>이미지를 업로드한 뒤 “분석 시작” 버튼을 눌러 결과를 확인하세요.</span>
                 </div>
               </div>
-
+              <div class="grid gap-3 sm:grid-cols-2">
+                <div class="rounded-xl border border-slate-200 bg-white/60 p-4 text-center">
+                  <p class="text-xs text-slate-600">총 검사 면적 (px²)</p>
+                  <p id="totalArea" class="mt-2 text-2xl font-bold text-slate-900">0</p>
+                </div>
+                <div class="rounded-xl border border-sky-400/40 bg-sky-500/10 p-4 text-center">
+                  <p class="text-xs text-sky-700">청소 완료 면적</p>
+                  <p id="cleanedArea" class="mt-2 text-2xl font-bold text-sky-300">0</p>
+                </div>
+              </div>
             </div>
             <aside class="space-y-4">
               <div class="rounded-xl border border-slate-200 bg-white/50 p-5">
