@@ -410,38 +410,7 @@ const Home = () => (
                   <span>이미지를 업로드한 뒤 “분석 시작” 버튼을 눌러 결과를 확인하세요.</span>
                 </div>
               </div>
-              <div class="grid gap-3 sm:grid-cols-3">
-                <div class="rounded-xl border border-emerald-500/30 bg-emerald-600/10 p-4 text-center">
-                  <p class="text-xs text-emerald-700">총 구멍 수</p>
-                  <p id="totalHoles" class="mt-2 text-2xl font-bold text-emerald-700">0</p>
-                </div>
-                <div class="rounded-xl border border-sky-500/30 bg-sky-500/10 p-4 text-center">
-                  <p class="text-xs text-sky-700">청소 완료(검정)</p>
-                  <p id="cleanedCount" class="mt-2 text-2xl font-bold text-sky-300">0</p>
-                </div>
-                <div class="rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-center">
-                  <p class="text-xs text-rose-700">청소 필요(회색)</p>
-                  <p id="blockedCount" class="mt-2 text-2xl font-bold text-rose-300">0</p>
-                </div>
-              </div>
-              <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <div class="rounded-xl border border-slate-200 bg-white/60 p-4 text-center">
-                  <p class="text-xs text-slate-600">총 검사 면적 (px²)</p>
-                  <p id="totalArea" class="mt-2 text-2xl font-bold text-slate-900">0</p>
-                </div>
-                <div class="rounded-xl border border-sky-400/40 bg-sky-500/10 p-4 text-center">
-                  <p class="text-xs text-sky-700">청소 완료 면적</p>
-                  <p id="cleanedArea" class="mt-2 text-2xl font-bold text-sky-300">0</p>
-                </div>
-                <div class="rounded-xl border border-rose-400/40 bg-rose-500/10 p-4 text-center">
-                  <p class="text-xs text-rose-700">청소 필요 면적 및 골격 제외 면적</p>
-                  <p id="blockedArea" class="mt-2 text-2xl font-bold text-rose-300">0</p>
-                </div>
-                <div class="rounded-xl border border-lime-400/40 bg-lime-500/10 p-4 text-center">
-                  <p class="text-xs text-lime-100">미분류 후보 면적</p>
-                  <p id="missedArea" class="mt-2 text-2xl font-bold text-lime-200">0</p>
-                </div>
-              </div>
+
             </div>
             <aside class="space-y-4">
               <div class="rounded-xl border border-slate-200 bg-white/50 p-5">
