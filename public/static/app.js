@@ -924,8 +924,8 @@ const drawHoleOverlay = () => {
 
   ;(state.results ?? []).forEach((hole) => {
     ctx.beginPath()
-    ctx.strokeStyle = hole.status === 'cleaned' ? 'rgba(125, 211, 252, 0.8)' : 'rgba(244, 114, 182, 0.8)'
-    ctx.fillStyle = hole.status === 'cleaned' ? 'rgba(56, 189, 248, 0.45)' : 'rgba(244, 114, 182, 0.35)'
+    ctx.strokeStyle = hole.status === 'cleaned' ? 'rgba(125, 211, 252, 0.8)' : 'rgba(239, 68, 68, 0.9)'
+    ctx.fillStyle = hole.status === 'cleaned' ? 'rgba(56, 189, 248, 0.45)' : 'rgba(239, 68, 68, 0.5)'
     ctx.arc(hole.x, hole.y, hole.radius * 0.9, 0, Math.PI * 2)
     ctx.fill()
     ctx.stroke()
