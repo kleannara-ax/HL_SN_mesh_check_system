@@ -821,11 +821,12 @@ const drawROIHighlight = (ctx) => {
   ctx.save()
   
   if (roi && !state.selectingROI) {
-    ctx.fillStyle = 'rgba(255, 140, 0, 0.15)'
+    // ROI 내부는 투명하게 (채우기 제거)
+    // ctx.fillStyle = 'rgba(255, 140, 0, 0.15)'
     ctx.strokeStyle = 'rgba(255, 100, 0, 1.0)'
     ctx.lineWidth = 4
     ctx.setLineDash([])
-    ctx.fillRect(roi.x, roi.y, roi.width, roi.height)
+    // ctx.fillRect(roi.x, roi.y, roi.width, roi.height)
     ctx.strokeRect(roi.x + 1.5, roi.y + 1.5, roi.width - 3, roi.height - 3)
     
     ctx.fillStyle = 'rgba(255, 100, 0, 0.95)'
@@ -843,10 +844,11 @@ const drawROIHighlight = (ctx) => {
   
   if (preview && state.selectingROI) {
     ctx.setLineDash([10, 5])
-    ctx.fillStyle = 'rgba(255, 215, 0, 0.20)'
+    // 드래그 중 미리보기도 투명하게 (채우기 제거)
+    // ctx.fillStyle = 'rgba(255, 215, 0, 0.20)'
     ctx.strokeStyle = 'rgba(255, 165, 0, 1.0)'
     ctx.lineWidth = 3
-    ctx.fillRect(preview.x, preview.y, preview.width, preview.height)
+    // ctx.fillRect(preview.x, preview.y, preview.width, preview.height)
     ctx.strokeRect(preview.x + 1, preview.y + 1, preview.width - 2, preview.height - 2)
     
     if (preview.width > 40 && preview.height > 30) {
