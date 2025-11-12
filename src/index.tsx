@@ -212,7 +212,7 @@ const Home = () => (
               <input
                 id="inspectionTitle"
                 type="text"
-                placeholder="예: 1공장 A라인 출고 전 청소 검증"
+                placeholder="예: 패드 매쉬 청소 검증"
                 class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-600 focus:border-emerald-500 focus:outline-none"
                 maxLength={80}
               />
