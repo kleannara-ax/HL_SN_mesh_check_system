@@ -40,7 +40,8 @@ npm run deploy           # Cloudflare Pages 배포 파이프라인
 ## URL / 엔드포인트
 
 ### 🌐 프로덕션 배포 URL
-**Cloudflare Pages**: https://a0504845.mesh-inspector.pages.dev
+**Cloudflare Pages**: https://mesh-inspector.pages.dev
+**최신 배포**: https://df7b4a46.mesh-inspector.pages.dev
 
 ### 페이지 라우트
 - `/` : 메인 대시보드 (이미지 업로드, ROI 지정, 분석, 통계)
