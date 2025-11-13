@@ -467,28 +467,7 @@ const Home = () => (
                   점 위치 이미지 다운로드
                 </button>
               </div>
-              <div class="rounded-xl border border-slate-200 bg-white/50 p-5">
-                <div class="flex items-center justify-between">
-                  <h3 class="text-sm font-semibold text-slate-900">검사 이력</h3>
-                  <a
-                    href="/history"
-                    class="inline-flex items-center gap-2 text-xs font-semibold text-emerald-700 underline-offset-2 hover:underline"
-                  >
-                    전체 보기
-                  </a>
-                </div>
-                <p class="mt-2 text-xs text-slate-600">
-                  저장된 검사 기록을 열람하고, 이미지·통계를 비교할 수 있는 페이지가 제공됩니다.
-                </p>
-                <button
-                  id="saveInspection"
-                  type="button"
-                  class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-slate-700 px-3 py-2 text-xs font-semibold text-slate-900 transition hover:bg-slate-600 disabled:cursor-not-allowed disabled:bg-white disabled:text-slate-9000"
-                  disabled
-                >
-                  검사 결과 저장
-                </button>
-              </div>
+
             </aside>
           </div>
         </section>

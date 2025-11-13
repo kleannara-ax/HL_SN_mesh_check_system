@@ -1938,9 +1938,6 @@ const analyzeMesh = async () => {
     }
     
     log('분석이 완료되었습니다. 필요 시 수동 교정을 진행하세요.')
-    
-    // 자동 저장 로직
-    await autoSaveInspection()
   } catch (error) {
     console.error(error)
     log(`분석 중 오류가 발생했습니다: ${error.message}`, 'error')
@@ -2013,9 +2010,6 @@ const handleOverlayClick = (event) => {
     undo: !!state.manualEdits.length,
     save: true
   })
-  
-  // 수동 교정 후 자동 업데이트
-  autoSaveInspection()
 
   log(
     `구멍 #${nearest.id}의 상태를 "${previous === 'cleaned' ? '청소 완료' : '청소 필요'}"에서 "${nearest.status === 'cleaned' ? '청소 완료' : '청소 필요'}"로 변경했습니다.`
@@ -2042,9 +2036,6 @@ const undoLastEdit = () => {
   updateStats()
   setActionButtons({ analyze: true, reset: true, edit: true, undo: !!state.manualEdits.length, save: true })
   log(`구멍 #${last.id}의 상태를 되돌렸습니다.`)
-  
-  // 되돌리기 후 자동 업데이트
-  autoSaveInspection()
 }
 
 const loadImageToCanvas = async (file, source = 'upload') => {
