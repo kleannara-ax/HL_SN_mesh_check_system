@@ -426,7 +426,7 @@ const Home = () => (
                 <p class="text-[11px] uppercase tracking-wide text-slate-600">면적 기준 (ROI 적용)</p>
                 <p class="mt-2 text-4xl font-black text-emerald-700" id="cleaningRate">0%</p>
                 <p class="mt-2 text-xs text-slate-600">
-                  빨간색(청소 필요)으로 표시된 면적 비율을 기반으로 계산됩니다. 수동 교정 및 ROI 재설정 시 즉시 갱신됩니다.
+                  전체 면적 대비 파란색(청소 완료)으로 표시된 면적을 제외한 비율을 기반으로 계산됩니다. 수동 교정 및 ROI 재설정 시 즉시 갱신됩니다.
                 </p>
               </div>
               <div class="rounded-xl border border-slate-200 bg-white/50 p-5">
