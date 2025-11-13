@@ -429,10 +429,6 @@ const Home = () => (
                 <p class="mt-2 text-xs text-slate-600">
                   빨간색(청소 필요)으로 표시된 면적 비율을 기반으로 계산됩니다. 수동 교정 및 ROI 재설정 시 즉시 갱신됩니다.
                 </p>
-                <div class="mt-4 rounded-lg border border-slate-200/60 bg-white/70 p-3">
-                  <p class="text-[11px] uppercase tracking-wide text-slate-600">구멍 개수 기준 청소율</p>
-                  <p id="countCleaningRate" class="mt-1 text-xl font-semibold text-slate-900">0%</p>
-                </div>
               </div>
               <div class="rounded-xl border border-slate-200 bg-white/50 p-5">
                 <h3 class="text-sm font-semibold text-slate-900">결과 수동 교정</h3>
