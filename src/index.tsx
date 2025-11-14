@@ -58,14 +58,10 @@ const InspectionDetail = ({ inspection }: { inspection: any }) => (
       {/* 통계 섹션 */}
       <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
         <h2 class="text-lg font-semibold text-slate-900">검사 통계</h2>
-        <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div class="rounded-xl border border-emerald-500/30 bg-emerald-50 p-4 text-center">
             <p class="text-xs font-medium uppercase tracking-wide text-emerald-700">청소율 (면적)</p>
             <p class="mt-2 text-3xl font-bold text-emerald-700">{inspection.cleaning_rate_area.toFixed(1)}%</p>
-          </div>
-          <div class="rounded-xl border border-sky-500/30 bg-sky-50 p-4 text-center">
-            <p class="text-xs font-medium uppercase tracking-wide text-sky-700">청소율 (개수)</p>
-            <p class="mt-2 text-3xl font-bold text-sky-700">{inspection.cleaning_rate_count.toFixed(1)}%</p>
           </div>
           <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-center">
             <p class="text-xs font-medium uppercase tracking-wide text-slate-700">총 구멍 수</p>
@@ -77,21 +73,26 @@ const InspectionDetail = ({ inspection }: { inspection: any }) => (
           </div>
         </div>
 
-        <div class="mt-4 grid gap-4 sm:grid-cols-3">
+        <div class="mt-4 grid gap-4 sm:grid-cols-4">
+          <div class="rounded-xl border border-slate-300/40 bg-slate-50 p-4 text-center">
+            <p class="text-xs font-medium text-slate-700">전체 면적</p>
+            <p class="mt-2 text-2xl font-bold text-slate-900">{inspection.total_area.toLocaleString('ko-KR')}</p>
+            <p class="mt-1 text-xs text-slate-600">px²</p>
+          </div>
           <div class="rounded-xl border border-sky-400/40 bg-sky-50 p-4 text-center">
             <p class="text-xs font-medium text-sky-700">청소 완료</p>
-            <p class="mt-2 text-2xl font-bold text-sky-700">{inspection.cleaned_holes}</p>
-            <p class="mt-1 text-xs text-slate-600">{inspection.cleaned_area.toLocaleString('ko-KR')} px²</p>
+            <p class="mt-2 text-2xl font-bold text-sky-700">{inspection.cleaned_area.toLocaleString('ko-KR')}</p>
+            <p class="mt-1 text-xs text-slate-600">px²</p>
           </div>
           <div class="rounded-xl border border-rose-400/40 bg-rose-50 p-4 text-center">
             <p class="text-xs font-medium text-rose-700">청소 필요</p>
-            <p class="mt-2 text-2xl font-bold text-rose-700">{inspection.blocked_holes}</p>
-            <p class="mt-1 text-xs text-slate-600">{inspection.blocked_area.toLocaleString('ko-KR')} px²</p>
+            <p class="mt-2 text-2xl font-bold text-rose-700">{inspection.blocked_area.toLocaleString('ko-KR')}</p>
+            <p class="mt-1 text-xs text-slate-600">px²</p>
           </div>
           <div class="rounded-xl border border-lime-400/40 bg-lime-50 p-4 text-center">
             <p class="text-xs font-medium text-lime-700">미분류 후보</p>
-            <p class="mt-2 text-2xl font-bold text-lime-700">{inspection.missed_area.toLocaleString('ko-KR')} px²</p>
-            <p class="mt-1 text-xs text-slate-600">총 면적의 {(inspection.missed_area / inspection.total_area * 100).toFixed(1)}%</p>
+            <p class="mt-2 text-2xl font-bold text-lime-700">{inspection.missed_area.toLocaleString('ko-KR')}</p>
+            <p class="mt-1 text-xs text-slate-600">px²</p>
           </div>
         </div>
       </section>

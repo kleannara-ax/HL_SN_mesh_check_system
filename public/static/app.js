@@ -2450,21 +2450,17 @@ const loadInspectionHistory = async () => {
             </div>
             <div class="text-right">
               <p class="text-2xl font-bold text-emerald-600">${inspection.cleaning_rate_area.toFixed(1)}%</p>
-              <p class="text-xs text-slate-600">청소율</p>
+              <p class="text-xs text-slate-600">청소율 (면적)</p>
             </div>
           </div>
-          <div class="mt-3 grid grid-cols-3 gap-2 text-xs">
+          <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
             <div class="rounded bg-white p-2 text-center">
-              <p class="font-semibold text-slate-900">${inspection.total_holes}</p>
-              <p class="text-slate-600">총 구멍</p>
+              <p class="font-semibold text-slate-900">${inspection.total_area.toLocaleString('ko-KR')}</p>
+              <p class="text-slate-600">총 면적 (px²)</p>
             </div>
             <div class="rounded bg-white p-2 text-center">
-              <p class="font-semibold text-sky-600">${inspection.cleaned_holes}</p>
-              <p class="text-slate-600">청소 완료</p>
-            </div>
-            <div class="rounded bg-white p-2 text-center">
-              <p class="font-semibold text-rose-600">${inspection.blocked_holes}</p>
-              <p class="text-slate-600">청소 필요</p>
+              <p class="font-semibold text-sky-600">${inspection.cleaned_area.toLocaleString('ko-KR')}</p>
+              <p class="text-slate-600">청소 완료 (px²)</p>
             </div>
           </div>
           <div class="mt-3 flex justify-end">
