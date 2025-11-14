@@ -20,8 +20,6 @@ const state = {
   virtualHoles: null,
   title: '',
   cameraStream: null,
-  editMode: false,
-  manualEdits: [],
   lastObjectUrl: null,
   thresholds: {
     dark: 80,
@@ -36,7 +34,8 @@ const state = {
   selectionStart: null,
   selectionPreview: null,
   convertMissedToCleaned: true,  // 기본값: 체크됨
-  currentInspectionId: null  // 현재 검사 레코드 ID (자동 저장용)
+  currentInspectionId: null,  // 현재 검사 레코드 ID (자동 저장용)
+  autoSaved: false  // 자동 저장 여부 플래그
 }
 
 const elements = {}
@@ -47,8 +46,6 @@ const updateOverlayInteraction = () => {
 
   if (state.selectingROI) {
     overlay.style.cursor = 'crosshair'
-  } else if (state.editMode) {
-    overlay.style.cursor = 'pointer'
   } else {
     overlay.style.cursor = 'default'
   }
@@ -188,6 +185,8 @@ const resetWorkspace = () => {
   state.isAnalyzing = false
   state.pendingReanalysis = false
   state.convertMissedToCleaned = true  // 기본값: 체크됨
+  state.currentInspectionId = null  // 자동 저장 ID 초기화
+  state.autoSaved = false  // 자동 저장 플래그 초기화
   if (state.lastObjectUrl) {
     URL.revokeObjectURL(state.lastObjectUrl)
     state.lastObjectUrl = null
@@ -206,6 +205,10 @@ const resetWorkspace = () => {
   }
   if (elements.convertMissedToCleaned) {
     elements.convertMissedToCleaned.checked = true  // 기본값: 체크됨
+  }
+  // 저장 버튼 텍스트 초기화
+  if (elements.saveInspection) {
+    elements.saveInspection.textContent = '검사 결과 저장'
   }
   resetCanvas()
   resetStats()
@@ -237,8 +240,6 @@ const registerElements = () => {
   elements.missedArea = document.getElementById('missedArea')
   elements.cleaningRate = document.getElementById('cleaningRate')
   elements.countCleaningRate = document.getElementById('countCleaningRate')
-  elements.toggleEditMode = document.getElementById('toggleEditMode')
-  elements.undoButton = document.getElementById('undoButton')
   elements.saveInspection = document.getElementById('saveInspection')
   elements.titleInput = document.getElementById('inspectionTitle')
   elements.cameraContainer = document.getElementById('cameraContainer')
@@ -1653,7 +1654,7 @@ const autoSaveInspection = async () => {
     thresholdDark: state.thresholds.dark,
     thresholdGray: state.thresholds.gray,
     thresholdArea: state.thresholds.areaPercentile,
-    manualEditsCount: state.manualEdits.length,
+    manualEditsCount: 0,
     roiX: state.roi?.x ?? null,
     roiY: state.roi?.y ?? null,
     roiWidth: state.roi?.width ?? null,
@@ -1938,6 +1939,9 @@ const analyzeMesh = async () => {
     }
     
     log('분석이 완료되었습니다. 필요 시 수동 교정을 진행하세요.')
+    
+    // 자동 저장 실행
+    await autoSaveInspection()
   } catch (error) {
     console.error(error)
     log(`분석 중 오류가 발생했습니다: ${error.message}`, 'error')
@@ -1946,7 +1950,6 @@ const analyzeMesh = async () => {
       analyze: !!state.imageBitmap,
       reset: true,
       edit: hasResults,
-      undo: !!state.manualEdits.length,
       save: hasResults
     })
   } finally {
@@ -1962,8 +1965,14 @@ const analyzeMesh = async () => {
 }
 
 const handleOverlayClick = (event) => {
+  // Disabled - edit mode removed
+  return
+}
+
+// Legacy code below - kept for compatibility but disabled
+const _disabledHandleOverlayClick = (event) => {
   if (state.selectingROI) return
-  if (!state.editMode || !(state.results && state.results.length)) return
+  return // Edit mode disabled
   const { overlayCanvas } = elements
   if (!overlayCanvas) return
 
@@ -1974,69 +1983,157 @@ const handleOverlayClick = (event) => {
   const x = (event.clientX - rect.left) * scaleX
   const y = (event.clientY - rect.top) * scaleY
 
+  console.log('Edit mode: disabled', 'Position:', x, y)
+
+  // 점 추가 모드 - disabled
+  if (false) {
+    // 새 점의 ID 생성
+    const newId = state.results && state.results.length > 0 
+      ? Math.max(...state.results.map(h => h.id)) + 1 
+      : 1
+    
+    // 기본 반지름 설정 (기존 점들의 평균 또는 10)
+    const avgRadius = state.results && state.results.length > 0
+      ? state.results.reduce((sum, h) => sum + h.radius, 0) / state.results.length
+      : 10
+    
+    const newHole = {
+      id: newId,
+      x: x,
+      y: y,
+      radius: avgRadius,
+      area: Math.PI * avgRadius * avgRadius,
+      status: 'cleaned',  // 기본값: 청소 완료
+      avgBrightness: 0,
+      stdBrightness: 0
+    }
+    
+    if (!state.results) state.results = []
+    state.results.push(newHole)
+    
+    state.manualEdits.push({ 
+      type: 'add',
+      id: newId, 
+      hole: newHole,
+      timestamp: Date.now() 
+    })
+    
+    log(`새 점을 추가했습니다. (ID: ${newId}, 위치: ${Math.round(x)}, ${Math.round(y)})`, 'info')
+    
+    recalculateMetrics()
+    renderOverlay()
+    updateStats()
+    setActionButtons({
+      analyze: true,
+      reset: true,
+      edit: true,
+      undo: !!state.manualEdits.length,
+      save: true
+    })
+    return
+  }
+
+  // 기존 점 찾기
   let nearest = null
   let minDist = Infinity
 
-  for (const hole of state.results) {
-    const dx = hole.x - x
-    const dy = hole.y - y
-    const dist = Math.sqrt(dx * dx + dy * dy)
-    if (dist < hole.radius * 1.2 && dist < minDist) {
-      nearest = hole
-      minDist = dist
+  if (state.results) {
+    for (const hole of state.results) {
+      const dx = hole.x - x
+      const dy = hole.y - y
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      if (dist < hole.radius * 1.2 && dist < minDist) {
+        nearest = hole
+        minDist = dist
+      }
     }
   }
 
-  if (!nearest) {
-    log('선택한 위치에 구멍이 없습니다. 더 정확히 클릭해 주세요.', 'warning')
+  // 점 삭제 모드
+  if (state.editType === 'delete') {
+    if (!nearest) {
+      log('선택한 위치에 구멍이 없습니다. 더 정확히 클릭해 주세요.', 'warning')
+      return
+    }
+    
+    const deletedHole = { ...nearest }  // 복사본 저장
+    const index = state.results.indexOf(nearest)
+    
+    if (index === -1) {
+      log('삭제할 구멍을 찾을 수 없습니다.', 'error')
+      console.error('Delete failed: hole not found in results', nearest)
+      return
+    }
+    
+    state.results.splice(index, 1)
+    
+    console.log('Deleted hole:', deletedHole.id, 'Remaining holes:', state.results.length)
+    
+    state.manualEdits.push({ 
+      type: 'delete',
+      id: deletedHole.id,
+      hole: deletedHole,
+      timestamp: Date.now() 
+    })
+    
+    if (state.candidateMask && state.candidateMask.length === overlayCanvas.width * overlayCanvas.height) {
+      state.missedMask = buildMissedMask(state.candidateMask, state.results, overlayCanvas.width, overlayCanvas.height)
+    }
+    
+    log(`구멍 #${deletedHole.id}를 삭제했습니다. (남은 구멍: ${state.results.length}개)`, 'info')
+    
+    recalculateMetrics()
+    renderOverlay()
+    updateStats()
+    setActionButtons({
+      analyze: true,
+      reset: true,
+      edit: true,
+      undo: !!state.manualEdits.length,
+      save: true
+    })
     return
   }
 
-  const previous = nearest.status
-  nearest.status = previous === 'cleaned' ? 'blocked' : 'cleaned'
-  state.manualEdits.push({ id: nearest.id, previous, next: nearest.status, timestamp: Date.now() })
+  // 토글 모드 (기존 기능)
+  if (state.editType === 'toggle') {
+    if (!nearest) {
+      log('선택한 위치에 구멍이 없습니다. 더 정확히 클릭해 주세요.', 'warning')
+      return
+    }
 
-  if (state.candidateMask && state.candidateMask.length === overlayCanvas.width * overlayCanvas.height) {
-    state.missedMask = buildMissedMask(state.candidateMask, state.results, overlayCanvas.width, overlayCanvas.height)
+    const previous = nearest.status
+    nearest.status = previous === 'cleaned' ? 'blocked' : 'cleaned'
+    state.manualEdits.push({ 
+      type: 'toggle',
+      id: nearest.id, 
+      previous, 
+      next: nearest.status, 
+      timestamp: Date.now() 
+    })
+
+    if (state.candidateMask && state.candidateMask.length === overlayCanvas.width * overlayCanvas.height) {
+      state.missedMask = buildMissedMask(state.candidateMask, state.results, overlayCanvas.width, overlayCanvas.height)
+    }
+
+    recalculateMetrics()
+    renderOverlay()
+    updateStats()
+    setActionButtons({
+      analyze: true,
+      reset: true,
+      edit: true,
+      undo: !!state.manualEdits.length,
+      save: true
+    })
+
+    log(
+      `구멍 #${nearest.id}의 상태를 "${previous === 'cleaned' ? '청소 완료' : '청소 필요'}"에서 "${nearest.status === 'cleaned' ? '청소 완료' : '청소 필요'}"로 변경했습니다.`
+    )
   }
-
-  recalculateMetrics()
-  renderOverlay()
-  updateStats()
-  setActionButtons({
-    analyze: true,
-    reset: true,
-    edit: true,
-    undo: !!state.manualEdits.length,
-    save: true
-  })
-
-  log(
-    `구멍 #${nearest.id}의 상태를 "${previous === 'cleaned' ? '청소 완료' : '청소 필요'}"에서 "${nearest.status === 'cleaned' ? '청소 완료' : '청소 필요'}"로 변경했습니다.`
-  )
 }
 
-const undoLastEdit = () => {
-  if (!state.manualEdits.length) {
-    log('되돌릴 편집이 없습니다.', 'warning')
-    return
-  }
-  const last = state.manualEdits.pop()
-  const hole = state.results?.find((item) => item.id === last.id)
-  if (!hole) return
-  hole.status = last.previous
 
-  const { overlayCanvas } = elements
-  if (overlayCanvas && state.candidateMask && state.candidateMask.length === overlayCanvas.width * overlayCanvas.height) {
-    state.missedMask = buildMissedMask(state.candidateMask, state.results, overlayCanvas.width, overlayCanvas.height)
-  }
-
-  recalculateMetrics()
-  renderOverlay()
-  updateStats()
-  setActionButtons({ analyze: true, reset: true, edit: true, undo: !!state.manualEdits.length, save: true })
-  log(`구멍 #${last.id}의 상태를 되돌렸습니다.`)
-}
 
 const loadImageToCanvas = async (file, source = 'upload') => {
   try {
@@ -2201,20 +2298,7 @@ const setupEventListeners = () => {
   elements.thresholdGray?.addEventListener('input', thresholdHandler)
   elements.thresholdArea?.addEventListener('input', thresholdHandler)
 
-  elements.toggleEditMode?.addEventListener('click', () => {
-    if (!state.results || !state.results.length) {
-      log('편집할 분석 결과가 없습니다.', 'warning')
-      return
-    }
-    state.editMode = !state.editMode
-    elements.toggleEditMode.textContent = state.editMode ? '편집 모드 종료' : '편집 모드 전환'
-    log(state.editMode ? '편집 모드를 활성화했습니다. 원하는 구멍을 클릭하여 상태를 변경하세요.' : '편집 모드를 종료했습니다.')
-    updateOverlayInteraction()
-  })
 
-  elements.undoButton?.addEventListener('click', () => {
-    undoLastEdit()
-  })
 
   elements.overlayCanvas?.addEventListener('click', handleOverlayClick)
   elements.overlayCanvas?.addEventListener('pointerdown', handleOverlayPointerDown)
@@ -2233,6 +2317,7 @@ const setupEventListeners = () => {
     const metrics = state.metrics || defaultMetrics()
 
     // Disable save button during request
+    const originalText = elements.saveInspection?.textContent || '검사 결과 저장'
     if (elements.saveInspection) {
       elements.saveInspection.disabled = true
       elements.saveInspection.textContent = '저장 중...'
@@ -2252,7 +2337,7 @@ const setupEventListeners = () => {
       thresholdDark: state.thresholds.dark,
       thresholdGray: state.thresholds.gray,
       thresholdArea: state.thresholds.areaPercentile,
-      manualEditsCount: state.manualEdits.length,
+      manualEditsCount: 0,
       roiX: state.roi?.x || null,
       roiY: state.roi?.y || null,
       roiWidth: state.roi?.width || null,
@@ -2272,7 +2357,13 @@ const setupEventListeners = () => {
       const result = await response.json()
 
       if (result.success) {
-        log(`✅ "${title}" 검사 결과가 성공적으로 저장되었습니다. (ID: ${result.id})`, 'info')
+        state.currentInspectionId = result.id
+        state.autoSaved = true
+        if (originalText.includes('다시')) {
+          log(`✅ "${title}" 검사 결과가 다시 저장되었습니다. (ID: ${result.id})`, 'info')
+        } else {
+          log(`✅ "${title}" 검사 결과가 수동으로 저장되었습니다. (ID: ${result.id})`, 'info')
+        }
       } else {
         log(`❌ 저장 실패: ${result.error}`, 'error')
       }
@@ -2283,7 +2374,7 @@ const setupEventListeners = () => {
       // Re-enable save button
       if (elements.saveInspection) {
         elements.saveInspection.disabled = false
-        elements.saveInspection.textContent = '검사 결과 저장'
+        elements.saveInspection.textContent = state.autoSaved ? '검사 결과 다시 저장' : '검사 결과 저장'
       }
     }
   })

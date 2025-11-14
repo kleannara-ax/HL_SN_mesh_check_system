@@ -31,7 +31,6 @@ export const renderer = jsxRenderer(({ children, title }) => (
       <link
         rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
-        integrity="sha512-VK1mT6b+8gvOArLfn70WhBubcFGQ60zpWgkt8BkWtOZLDmcdVow2QI5i7oXWJ9icz6Z5thkUCvEw8gG8MXjC4A=="
         crossOrigin="anonymous"
         referrerPolicy="no-referrer"
       />

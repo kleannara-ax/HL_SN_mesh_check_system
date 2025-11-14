@@ -430,30 +430,6 @@ const Home = () => (
                 </p>
               </div>
               <div class="rounded-xl border border-slate-200 bg-white/50 p-5">
-                <h3 class="text-sm font-semibold text-slate-900">결과 수동 교정</h3>
-                <p class="mt-2 text-xs text-slate-600">
-                  오탐지된 구멍을 클릭하면 상태를 전환할 수 있습니다. 드래그 선택 및 되돌리기 기능은 곧 추가될 예정입니다.
-                </p>
-                <div class="mt-4 flex flex-wrap gap-2">
-                  <button
-                    id="toggleEditMode"
-                    type="button"
-                    class="inline-flex items-center gap-2 rounded-lg border border-emerald-500/60 px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-500/10"
-                    disabled
-                  >
-                    편집 모드 전환
-                  </button>
-                  <button
-                    id="undoButton"
-                    type="button"
-                    class="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-400"
-                    disabled
-                  >
-                    되돌리기
-                  </button>
-                </div>
-              </div>
-              <div class="rounded-xl border border-slate-200 bg-white/50 p-5">
                 <h3 class="text-sm font-semibold text-slate-900">결과 내보내기</h3>
                 <p class="mt-2 text-xs text-slate-600">
                   분석된 점들만 투명 배경에 표시한 이미지를 다운로드할 수 있습니다.
@@ -466,6 +442,23 @@ const Home = () => (
                 >
                   점 위치 이미지 다운로드
                 </button>
+              </div>
+              <div class="rounded-xl border border-emerald-200 bg-emerald-50/50 p-5">
+                <h3 class="text-sm font-semibold text-emerald-900">검사 결과 저장</h3>
+                <p class="mt-2 text-xs text-slate-600">
+                  분석이 완료되면 자동으로 저장됩니다. 수정 후 다시 저장하거나 새로운 레코드로 저장하려면 아래 버튼을 클릭하세요.
+                </p>
+                <button
+                  id="saveInspection"
+                  type="button"
+                  class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 disabled:shadow-none"
+                  disabled
+                >
+                  💾 검사 결과 저장
+                </button>
+                <p class="mt-2 text-[10px] text-slate-500">
+                  💡 팁: 자동 저장 후 수동 교정을 한 경우, 이 버튼으로 변경사항을 새 레코드로 저장할 수 있습니다.
+                </p>
               </div>
 
             </aside>
