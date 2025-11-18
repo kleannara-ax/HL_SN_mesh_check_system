@@ -2446,7 +2446,7 @@ const loadInspectionHistory = async () => {
           <div class="flex items-start justify-between">
             <div class="flex-1">
               <h3 class="font-semibold text-slate-900">${inspection.title || '제목 없음'}</h3>
-              <p class="mt-1 text-xs text-slate-600">${new Date(inspection.created_at).toLocaleString('ko-KR')}</p>
+              <p class="mt-1 text-xs text-slate-600">${new Date(inspection.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}</p>
             </div>
             <div class="text-right">
               <p class="text-2xl font-bold text-emerald-600">${inspection.cleaning_rate_area.toFixed(1)}%</p>

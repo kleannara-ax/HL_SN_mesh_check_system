@@ -27,7 +27,7 @@ const InspectionDetail = ({ inspection }: { inspection: any }) => (
           <p class="text-xs font-semibold uppercase tracking-wide text-emerald-600">검사 결과 상세</p>
           <h1 class="text-2xl font-bold text-slate-900">{inspection.title || '제목 없음'}</h1>
           <p class="mt-1 text-sm text-slate-600">
-            검사 시각: {new Date(inspection.created_at).toLocaleString('ko-KR')}
+            검사 시각: {new Date(inspection.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
           </p>
         </div>
         <a
