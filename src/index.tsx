@@ -288,26 +288,13 @@ const Home = () => (
             </div>
             <div
               id="cameraContainer"
-              class="hidden relative overflow-hidden rounded-xl border border-slate-200 bg-white/60"
+              class="hidden overflow-hidden rounded-xl border border-slate-200 bg-white/60"
             >
               <video id="cameraPreview" class="h-full w-full object-cover" playsInline muted></video>
-              {/* 80% ROI 가이드 오버레이 */}
-              <div class="pointer-events-none absolute inset-0">
-                <div class="absolute inset-[10%] border-2 border-dashed border-emerald-400 bg-emerald-400/5">
-                  <div class="absolute left-1/2 top-2 -translate-x-1/2 rounded bg-emerald-600 px-2 py-1 text-[10px] font-semibold text-white shadow-lg">
-                    권장 촬영 영역 (80%)
-                  </div>
-                  {/* 모서리 마커 */}
-                  <div class="absolute left-0 top-0 h-4 w-4 border-l-4 border-t-4 border-emerald-500"></div>
-                  <div class="absolute right-0 top-0 h-4 w-4 border-r-4 border-t-4 border-emerald-500"></div>
-                  <div class="absolute bottom-0 left-0 h-4 w-4 border-b-4 border-l-4 border-emerald-500"></div>
-                  <div class="absolute bottom-0 right-0 h-4 w-4 border-b-4 border-r-4 border-emerald-500"></div>
-                </div>
-              </div>
             </div>
             <p class="text-xs leading-relaxed text-slate-600">
-              💡 <strong>촬영 가이드:</strong> 카메라 활성화 시 화면에 표시되는 <span class="text-emerald-600 font-semibold">초록색 가이드 박스(80% 영역)</span> 안에 매쉬가 들어오도록 촬영하세요. 
-              이렇게 하면 일관된 조건에서 청소율을 측정할 수 있습니다.
+              모바일·태블릿에서는 후면 카메라로 바로 촬영하여 분석할 수 있습니다. 촬영 후 결과가 마음에 들지 않으면 임계값을 조정하거나
+              다시 촬영하세요.
             </p>
           </div>
 
