@@ -278,6 +278,14 @@ const Home = () => (
                 촬영
               </button>
               <button
+                id="multiCaptureButton"
+                type="button"
+                class="inline-flex items-center gap-2 rounded-lg border border-purple-500 bg-purple-50 px-3 py-2 text-xs font-semibold text-purple-700 transition hover:bg-purple-100 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
+                disabled
+              >
+                📸 다중 촬영 (테스트중)
+              </button>
+              <button
                 id="stopCameraButton"
                 type="button"
                 class="inline-flex items-center gap-2 rounded-lg border border-rose-500 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-9000"
@@ -285,6 +293,19 @@ const Home = () => (
               >
                 카메라 종료
               </button>
+            </div>
+            {/* 다중 촬영 상태 표시 */}
+            <div id="multiCaptureStatus" class="hidden rounded-lg border border-purple-200 bg-purple-50 p-3">
+              <div class="flex items-center gap-2">
+                <div class="h-2 w-2 animate-pulse rounded-full bg-purple-600"></div>
+                <p id="multiCaptureText" class="text-xs font-semibold text-purple-900">준비 중...</p>
+              </div>
+              <div class="mt-2 flex gap-1">
+                <div id="captureIndicator1" class="h-2 w-1/4 rounded bg-slate-300"></div>
+                <div id="captureIndicator2" class="h-2 w-1/4 rounded bg-slate-300"></div>
+                <div id="captureIndicator3" class="h-2 w-1/4 rounded bg-slate-300"></div>
+                <div id="captureIndicator4" class="h-2 w-1/4 rounded bg-slate-300"></div>
+              </div>
             </div>
             <div
               id="cameraContainer"

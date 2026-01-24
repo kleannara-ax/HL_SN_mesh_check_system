@@ -35,7 +35,14 @@ const state = {
   selectionPreview: null,
   convertMissedToCleaned: true,  // 기본값: 체크됨
   currentInspectionId: null,  // 현재 검사 레코드 ID (자동 저장용)
-  autoSaved: false  // 자동 저장 여부 플래그
+  autoSaved: false,  // 자동 저장 여부 플래그
+  multiCapture: {
+    isCapturing: false,
+    capturedImages: [],
+    analysisResults: [],
+    currentShot: 0,
+    totalShots: 4
+  }
 }
 
 const elements = {}
@@ -246,11 +253,18 @@ const registerElements = () => {
   elements.cameraPreview = document.getElementById('cameraPreview')
   elements.startCameraButton = document.getElementById('startCameraButton')
   elements.captureCameraButton = document.getElementById('captureCameraButton')
+  elements.multiCaptureButton = document.getElementById('multiCaptureButton')
   elements.stopCameraButton = document.getElementById('stopCameraButton')
   elements.roiSelectButton = document.getElementById('roiSelectButton')
   elements.roiClearButton = document.getElementById('roiClearButton')
   elements.downloadOverlayButton = document.getElementById('downloadOverlayButton')
   elements.convertMissedToCleaned = document.getElementById('convertMissedToCleaned')
+  elements.multiCaptureStatus = document.getElementById('multiCaptureStatus')
+  elements.multiCaptureText = document.getElementById('multiCaptureText')
+  elements.captureIndicator1 = document.getElementById('captureIndicator1')
+  elements.captureIndicator2 = document.getElementById('captureIndicator2')
+  elements.captureIndicator3 = document.getElementById('captureIndicator3')
+  elements.captureIndicator4 = document.getElementById('captureIndicator4')
 }
 
 const updateStats = () => {
@@ -656,6 +670,7 @@ const handleOverlayPointerLeave = (event) => {
 const updateCameraControls = (active) => {
   if (elements.startCameraButton) elements.startCameraButton.disabled = active
   if (elements.captureCameraButton) elements.captureCameraButton.disabled = !active
+  if (elements.multiCaptureButton) elements.multiCaptureButton.disabled = !active
   if (elements.stopCameraButton) elements.stopCameraButton.disabled = !active
   if (elements.cameraContainer) elements.cameraContainer.classList.toggle('hidden', !active)
 }
@@ -723,6 +738,359 @@ const captureCameraFrame = async () => {
   ensureInspectionTitle()
   await loadImageToCanvas(file, 'camera')
   log('카메라 촬영 이미지를 캔버스에 불러왔습니다.')
+}
+
+// 다중 촬영 함수들
+const updateMultiCaptureStatus = (show, text = '', shotNumber = 0) => {
+  if (!elements.multiCaptureStatus) return
+  
+  if (show) {
+    elements.multiCaptureStatus.classList.remove('hidden')
+    if (text && elements.multiCaptureText) {
+      elements.multiCaptureText.textContent = text
+    }
+    
+    // 진행 상황 표시 업데이트
+    for (let i = 1; i <= 4; i++) {
+      const indicator = elements[`captureIndicator${i}`]
+      if (!indicator) continue
+      
+      if (i < shotNumber) {
+        // 완료된 촬영
+        indicator.className = 'h-2 w-1/4 rounded bg-emerald-500'
+      } else if (i === shotNumber) {
+        // 현재 촬영 중
+        indicator.className = 'h-2 w-1/4 rounded bg-purple-500 animate-pulse'
+      } else {
+        // 대기 중
+        indicator.className = 'h-2 w-1/4 rounded bg-slate-300'
+      }
+    }
+  } else {
+    elements.multiCaptureStatus.classList.add('hidden')
+  }
+}
+
+const captureFrameOnly = async () => {
+  if (!elements.cameraPreview || !state.cameraStream) {
+    return null
+  }
+  const video = elements.cameraPreview
+  if (!video.videoWidth || !video.videoHeight) {
+    return null
+  }
+
+  const canvas = document.createElement('canvas')
+  canvas.width = video.videoWidth
+  canvas.height = video.videoHeight
+  const ctx = canvas.getContext('2d')
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.95))
+  if (!blob) return null
+
+  const timestamp = Date.now()
+  const fileName = `multi-capture-${timestamp}.jpg`
+  return new File([blob], fileName, { type: 'image/jpeg', lastModified: timestamp })
+}
+
+const analyzeImageQuietly = async (file) => {
+  const originalLog = window.console.log
+  const logs = []
+  
+  // 로그 임시 캡처
+  window.console.log = (...args) => logs.push(args)
+  
+  try {
+    // 임시 캔버스에 이미지 로드
+    const objectUrl = URL.createObjectURL(file)
+    let bitmap
+    if ('createImageBitmap' in window) {
+      bitmap = await createImageBitmap(file)
+    } else {
+      bitmap = await new Promise((resolve, reject) => {
+        const img = new Image()
+        img.onload = () => resolve(img)
+        img.onerror = reject
+        img.src = objectUrl
+      })
+    }
+    
+    // 현재 state 백업
+    const backupState = {
+      image: state.image,
+      imageBitmap: state.imageBitmap,
+      results: state.results,
+      hexMask: state.hexMask,
+      candidateMask: state.candidateMask,
+      missedMask: state.missedMask,
+      virtualHoles: state.virtualHoles,
+      metrics: state.metrics
+    }
+    
+    // 임시로 이미지 설정
+    state.image = file
+    state.imageBitmap = bitmap
+    
+    // 분석 실행 (UI 업데이트 없이)
+    const { meshCanvas, overlayCanvas } = elements
+    if (meshCanvas && overlayCanvas) {
+      applyCanvasLayout(bitmap.width, bitmap.height)
+      
+      const ctx = meshCanvas.getContext('2d')
+      ctx.drawImage(bitmap, 0, 0)
+      
+      // analyzeMesh 로직 실행
+      const imageData = ctx.getImageData(0, 0, bitmap.width, bitmap.height)
+      const gray = computeGrayscale(imageData)
+      
+      const { dark, gray: grayThreshold, areaPercentile } = state.thresholds
+      const candidateMask = extractCandidateMask(gray, bitmap.width, bitmap.height, dark, grayThreshold)
+      const components = labelComponents(candidateMask, bitmap.width, bitmap.height)
+      const holes = extractHoles(components, bitmap.width, bitmap.height, imageData, areaPercentile, dark)
+      
+      state.candidateMask = candidateMask
+      state.results = holes
+      
+      recalculateMetrics()
+      
+      // 결과 저장
+      const analysisResult = {
+        holes: JSON.parse(JSON.stringify(holes)),
+        metrics: JSON.parse(JSON.stringify(state.metrics)),
+        width: bitmap.width,
+        height: bitmap.height
+      }
+      
+      // State 복원
+      state.image = backupState.image
+      state.imageBitmap = backupState.imageBitmap
+      state.results = backupState.results
+      state.hexMask = backupState.hexMask
+      state.candidateMask = backupState.candidateMask
+      state.missedMask = backupState.missedMask
+      state.virtualHoles = backupState.virtualHoles
+      state.metrics = backupState.metrics
+      
+      URL.revokeObjectURL(objectUrl)
+      
+      return analysisResult
+    }
+    
+    return null
+  } catch (error) {
+    console.error('Analysis error:', error)
+    return null
+  } finally {
+    window.console.log = originalLog
+  }
+}
+
+const matchHoles = (results1, results2, threshold = 30) => {
+  const matched = []
+  const used2 = new Set()
+  
+  for (const hole1 of results1) {
+    let bestMatch = null
+    let bestDist = threshold
+    
+    for (let i = 0; i < results2.length; i++) {
+      if (used2.has(i)) continue
+      
+      const hole2 = results2[i]
+      const dx = hole1.x - hole2.x
+      const dy = hole1.y - hole2.y
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      
+      if (dist < bestDist) {
+        bestMatch = { hole: hole2, index: i }
+        bestDist = dist
+      }
+    }
+    
+    if (bestMatch) {
+      used2.add(bestMatch.index)
+      matched.push({
+        hole1,
+        hole2: bestMatch.hole,
+        distance: bestDist
+      })
+    }
+  }
+  
+  return matched
+}
+
+const mergeMultipleResults = (analysisResults) => {
+  if (!analysisResults || analysisResults.length === 0) return null
+  if (analysisResults.length === 1) return analysisResults[0]
+  
+  console.log('[Multi-Capture Merge] Starting merge of', analysisResults.length, 'results')
+  
+  // 첫 번째 결과를 기준으로 시작
+  const baseResult = analysisResults[0]
+  const mergedHoles = JSON.parse(JSON.stringify(baseResult.holes))
+  
+  // 각 구멍에 투표 정보 추가
+  mergedHoles.forEach(hole => {
+    hole.votes = { cleaned: 0, blocked: 0, total: 1 }
+    if (hole.status === 'cleaned') hole.votes.cleaned = 1
+    else hole.votes.blocked = 1
+  })
+  
+  // 나머지 결과들과 병합
+  for (let i = 1; i < analysisResults.length; i++) {
+    const currentResult = analysisResults[i]
+    const matched = matchHoles(mergedHoles, currentResult.holes)
+    
+    console.log(`[Multi-Capture Merge] Image ${i + 1}: Matched ${matched.length} holes`)
+    
+    matched.forEach(({ hole1, hole2 }) => {
+      hole1.votes.total++
+      if (hole2.status === 'cleaned') {
+        hole1.votes.cleaned++
+      } else {
+        hole1.votes.blocked++
+      }
+    })
+  }
+  
+  // OR 로직 적용: 한 번이라도 cleaned이면 cleaned
+  mergedHoles.forEach(hole => {
+    if (hole.votes.cleaned > 0) {
+      hole.status = 'cleaned'
+    } else {
+      hole.status = 'blocked'
+    }
+    
+    console.log(`Hole ${hole.id}: ${hole.votes.cleaned}/${hole.votes.total} cleaned votes → ${hole.status}`)
+  })
+  
+  return {
+    holes: mergedHoles,
+    width: baseResult.width,
+    height: baseResult.height,
+    analysisResults: analysisResults
+  }
+}
+
+const startMultiCapture = async () => {
+  if (!elements.cameraPreview || !state.cameraStream) {
+    log('카메라가 활성화되어 있지 않습니다.', 'error')
+    return
+  }
+  
+  if (state.multiCapture.isCapturing) {
+    log('이미 다중 촬영이 진행 중입니다.', 'warning')
+    return
+  }
+  
+  state.multiCapture.isCapturing = true
+  state.multiCapture.capturedImages = []
+  state.multiCapture.analysisResults = []
+  state.multiCapture.currentShot = 0
+  
+  const totalShots = state.multiCapture.totalShots
+  const interval = 5000 // 5초
+  
+  log(`다중 촬영을 시작합니다 (${totalShots}장, ${interval/1000}초 간격). 각도를 조금씩 바꿔가며 촬영됩니다.`, 'info')
+  updateMultiCaptureStatus(true, '준비 중...', 0)
+  
+  // 버튼 비활성화
+  if (elements.multiCaptureButton) elements.multiCaptureButton.disabled = true
+  if (elements.captureCameraButton) elements.captureCameraButton.disabled = true
+  
+  try {
+    for (let i = 1; i <= totalShots; i++) {
+      state.multiCapture.currentShot = i
+      
+      // 카운트다운
+      for (let countdown = 5; countdown > 0; countdown--) {
+        updateMultiCaptureStatus(true, `${i}번째 촬영 ${countdown}초 후... 각도를 조금 바꿔주세요`, i)
+        await new Promise(resolve => setTimeout(resolve, 1000))
+      }
+      
+      // 촬영
+      updateMultiCaptureStatus(true, `${i}번째 촬영 중... 📸`, i)
+      const file = await captureFrameOnly()
+      
+      if (!file) {
+        log(`${i}번째 촬영에 실패했습니다.`, 'error')
+        continue
+      }
+      
+      state.multiCapture.capturedImages.push(file)
+      log(`${i}/${totalShots} 촬영 완료`)
+      
+      // 잠시 대기 (다음 촬영 준비)
+      if (i < totalShots) {
+        await new Promise(resolve => setTimeout(resolve, 500))
+      }
+    }
+    
+    // 모든 이미지 분석
+    updateMultiCaptureStatus(true, '촬영 완료! 분석 중...', totalShots)
+    log('모든 촬영 완료. 이미지 분석 중...')
+    
+    for (let i = 0; i < state.multiCapture.capturedImages.length; i++) {
+      const file = state.multiCapture.capturedImages[i]
+      log(`이미지 ${i + 1}/${totalShots} 분석 중...`)
+      
+      const result = await analyzeImageQuietly(file)
+      if (result) {
+        state.multiCapture.analysisResults.push(result)
+        log(`이미지 ${i + 1}: 구멍 ${result.holes.length}개 인식, 청소율 ${result.metrics.cleaningRateArea.toFixed(1)}%`)
+      }
+    }
+    
+    // 결과 병합
+    if (state.multiCapture.analysisResults.length > 0) {
+      log('분석 결과 병합 중...')
+      const mergedResult = mergeMultipleResults(state.multiCapture.analysisResults)
+      
+      if (mergedResult) {
+        // 병합된 결과를 메인 state에 적용
+        state.results = mergedResult.holes
+        recalculateMetrics()
+        renderOverlay()
+        updateStats()
+        
+        // 개별 결과 로그
+        log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'info')
+        log('📊 다중 촬영 분석 완료!', 'info')
+        mergedResult.analysisResults.forEach((result, i) => {
+          log(`  이미지 ${i + 1}: 청소율 ${result.metrics.cleaningRateArea.toFixed(1)}%`, 'info')
+        })
+        log(`  🎯 병합 결과: 청소율 ${state.metrics.cleaningRateArea.toFixed(1)}% (OR 병합)`, 'info')
+        log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'info')
+        
+        // 첫 번째 이미지를 대표 이미지로 표시
+        const firstFile = state.multiCapture.capturedImages[0]
+        state.image = firstFile
+        await loadImageToCanvas(firstFile, 'multi-capture')
+        
+        setActionButtons({
+          analyze: true,
+          reset: true,
+          edit: true,
+          save: true
+        })
+      }
+    } else {
+      log('분석 가능한 이미지가 없습니다.', 'error')
+    }
+    
+  } catch (error) {
+    console.error('Multi-capture error:', error)
+    log('다중 촬영 중 오류가 발생했습니다.', 'error')
+  } finally {
+    state.multiCapture.isCapturing = false
+    updateMultiCaptureStatus(false)
+    
+    // 버튼 재활성화
+    if (elements.multiCaptureButton) elements.multiCaptureButton.disabled = false
+    if (elements.captureCameraButton) elements.captureCameraButton.disabled = false
+  }
 }
 
 const drawMaskLayers = () => {
@@ -2249,6 +2617,10 @@ const setupEventListeners = () => {
 
   elements.captureCameraButton?.addEventListener('click', () => {
     captureCameraFrame()
+  })
+
+  elements.multiCaptureButton?.addEventListener('click', () => {
+    startMultiCapture()
   })
 
   elements.stopCameraButton?.addEventListener('click', () => {
