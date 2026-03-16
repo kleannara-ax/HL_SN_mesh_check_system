@@ -40,7 +40,6 @@ const InspectionDetail = ({ inspection }: { inspection: any }) => (
     </div>
 
     <main class="mx-auto max-w-6xl space-y-6 px-4 py-10">
-      {/* 원본 사진 & 오버레이 이미지 비교 */}
       {(inspection.original_image || inspection.overlay_image) && (
         <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
           <h2 class="text-lg font-semibold text-slate-900">검사 이미지</h2>
@@ -50,11 +49,7 @@ const InspectionDetail = ({ inspection }: { inspection: any }) => (
               <div>
                 <h3 class="mb-2 text-sm font-semibold text-slate-700">원본 사진</h3>
                 <div class="overflow-hidden rounded-xl border border-slate-200">
-                  <img
-                    src={inspection.original_image}
-                    alt="업로드한 원본 사진"
-                    class="w-full"
-                  />
+                  <img src={inspection.original_image} alt="업로드한 원본 사진" class="w-full" />
                 </div>
               </div>
             )}
@@ -62,11 +57,7 @@ const InspectionDetail = ({ inspection }: { inspection: any }) => (
               <div>
                 <h3 class="mb-2 text-sm font-semibold text-slate-700">분석 결과 오버레이</h3>
                 <div class="overflow-hidden rounded-xl border border-slate-200">
-                  <img
-                    src={inspection.overlay_image}
-                    alt="검사 결과 오버레이"
-                    class="w-full"
-                  />
+                  <img src={inspection.overlay_image} alt="검사 결과 오버레이" class="w-full" />
                 </div>
               </div>
             )}
@@ -74,7 +65,6 @@ const InspectionDetail = ({ inspection }: { inspection: any }) => (
         </section>
       )}
 
-      {/* 통계 섹션 */}
       <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
         <h2 class="text-lg font-semibold text-slate-900">검사 통계</h2>
         <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -96,27 +86,26 @@ const InspectionDetail = ({ inspection }: { inspection: any }) => (
           <div class="rounded-xl border border-slate-300/40 bg-slate-50 p-4 text-center">
             <p class="text-xs font-medium text-slate-700">전체 면적</p>
             <p class="mt-2 text-2xl font-bold text-slate-900">{inspection.total_area.toLocaleString('ko-KR')}</p>
-            <p class="mt-1 text-xs text-slate-600">px²</p>
+            <p class="mt-1 text-xs text-slate-600">px2</p>
           </div>
           <div class="rounded-xl border border-sky-400/40 bg-sky-50 p-4 text-center">
             <p class="text-xs font-medium text-sky-700">청소 완료</p>
             <p class="mt-2 text-2xl font-bold text-sky-700">{inspection.cleaned_area.toLocaleString('ko-KR')}</p>
-            <p class="mt-1 text-xs text-slate-600">px²</p>
+            <p class="mt-1 text-xs text-slate-600">px2</p>
           </div>
           <div class="rounded-xl border border-rose-400/40 bg-rose-50 p-4 text-center">
             <p class="text-xs font-medium text-rose-700">청소 필요</p>
             <p class="mt-2 text-2xl font-bold text-rose-700">{inspection.blocked_area.toLocaleString('ko-KR')}</p>
-            <p class="mt-1 text-xs text-slate-600">px²</p>
+            <p class="mt-1 text-xs text-slate-600">px2</p>
           </div>
           <div class="rounded-xl border border-lime-400/40 bg-lime-50 p-4 text-center">
             <p class="text-xs font-medium text-lime-700">미분류 후보</p>
             <p class="mt-2 text-2xl font-bold text-lime-700">{inspection.missed_area.toLocaleString('ko-KR')}</p>
-            <p class="mt-1 text-xs text-slate-600">px²</p>
+            <p class="mt-1 text-xs text-slate-600">px2</p>
           </div>
         </div>
       </section>
 
-      {/* 분석 설정 */}
       <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
         <h2 class="text-lg font-semibold text-slate-900">분석 설정</h2>
         <div class="mt-4 grid gap-4 sm:grid-cols-2">
@@ -125,11 +114,11 @@ const InspectionDetail = ({ inspection }: { inspection: any }) => (
             <dl class="mt-2 space-y-1 text-sm">
               <div class="flex justify-between">
                 <dt class="text-slate-600">청소 완료(검정) 기준:</dt>
-                <dd class="font-semibold text-slate-900">≤ {inspection.threshold_dark}</dd>
+                <dd class="font-semibold text-slate-900">&le; {inspection.threshold_dark}</dd>
               </div>
               <div class="flex justify-between">
                 <dt class="text-slate-600">청소 필요(회색) 상한:</dt>
-                <dd class="font-semibold text-slate-900">≤ {inspection.threshold_gray}</dd>
+                <dd class="font-semibold text-slate-900">&le; {inspection.threshold_gray}</dd>
               </div>
               <div class="flex justify-between">
                 <dt class="text-slate-600">구멍 면적 필터:</dt>
@@ -151,7 +140,7 @@ const InspectionDetail = ({ inspection }: { inspection: any }) => (
                 </div>
                 <div class="flex justify-between">
                   <dt class="text-slate-600">크기:</dt>
-                  <dd class="font-semibold text-slate-900">{Math.round(inspection.roi_width)} × {Math.round(inspection.roi_height)} px</dd>
+                  <dd class="font-semibold text-slate-900">{Math.round(inspection.roi_width)} x {Math.round(inspection.roi_height)} px</dd>
                 </div>
               </dl>
             ) : (
@@ -169,7 +158,7 @@ const InspectionDetail = ({ inspection }: { inspection: any }) => (
     </main>
 
     <footer class="border-t border-slate-200 bg-white py-6 text-center text-xs text-slate-600">
-      ⓒ {new Date().getFullYear()} Mesh Cleanliness Inspector — Cloudflare Pages & Hono
+      Mesh Cleanliness Inspector v2 — Cloudflare Pages & Hono
     </footer>
   </div>
 )
@@ -179,12 +168,13 @@ const Home = () => (
     <div class="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-10 lg:flex-row">
       <main class="flex-1 space-y-8">
         <header class="space-y-3">
-          <p class="text-sm font-semibold text-emerald-600">Mesh Cleanliness Inspector</p>
+          <p class="text-sm font-semibold text-emerald-600">Mesh Cleanliness Inspector v2</p>
           <h1 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
             매쉬 구멍 청소 상태 판별 대시보드
           </h1>
           <p class="text-sm leading-relaxed text-slate-600">
             이 도구는 검정색 구멍(청소 완료)과 회색 구멍(청소 필요)을 분류해 청소율을 계산합니다.
+            반사(하이라이트) 자동 제외, 조명 불균일 보정, 품질 게이트를 지원합니다.
           </p>
         </header>
 
@@ -220,10 +210,10 @@ const Home = () => (
         <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/40">
           <h2 class="text-lg font-semibold text-slate-900">1. 이미지 업로드 & 기본 설정</h2>
           <p class="mt-1 text-sm text-slate-600">
-            매쉬가 선명하게 보이도록 촬영한 사진을 선택하세요. 밝기·대비 조정은 추후 분석 단계에서 자동으로 적용됩니다.
+            매쉬가 선명하게 보이도록 촬영한 사진을 선택하세요. 밝기/대비 조정은 추후 분석 단계에서 자동으로 적용됩니다.
           </p>
           <p class="mt-2 text-xs font-medium text-emerald-700">
-            권장 명도 기준: 청소 완료(검정) 80, 청소 필요(회색) 상한 145 — 환경에 따라 ±10 내에서 조정하세요.
+            권장 명도 기준: 청소 완료(검정) 80, 청소 필요(회색) 상한 145 — 환경에 따라 +/-10 내에서 조정하세요.
           </p>
           <div class="mt-6 grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
             <label class="flex flex-col gap-2 text-sm font-medium text-slate-700">
@@ -235,13 +225,13 @@ const Home = () => (
                 class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-600 focus:border-emerald-500 focus:outline-none"
                 maxLength={80}
               />
-              <span class="text-xs font-normal text-slate-600">미기재 시 업로드·촬영 시각이 자동으로 제목에 반영됩니다.</span>
+              <span class="text-xs font-normal text-slate-600">미기재 시 업로드/촬영 시각이 자동으로 제목에 반영됩니다.</span>
             </label>
             <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
               <h3 class="text-sm font-semibold text-slate-900">검사 목적</h3>
               <p class="mt-2 text-xs leading-relaxed text-slate-600">
                 출고 또는 공정 투입 직전에 필터 매쉬 청소 상태를 검증하여, 막힌 구멍이 있는지 조기에 확인합니다. 청소 완료 기준은
-                “검정색 구멍”이며, 회색 구멍은 추가 세척이 필요합니다.
+                "검정색 구멍"이며, 회색 구멍은 추가 세척이 필요합니다.
               </p>
             </div>
           </div>
@@ -297,14 +287,6 @@ const Home = () => (
                 촬영
               </button>
               <button
-                id="multiCaptureButton"
-                type="button"
-                class="inline-flex items-center gap-2 rounded-lg border border-purple-500 bg-purple-50 px-3 py-2 text-xs font-semibold text-purple-700 transition hover:bg-purple-100 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-50 disabled:text-slate-400"
-                disabled
-              >
-                📸 다중 촬영 (테스트중)
-              </button>
-              <button
                 id="stopCameraButton"
                 type="button"
                 class="inline-flex items-center gap-2 rounded-lg border border-rose-500 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-9000"
@@ -313,31 +295,16 @@ const Home = () => (
                 카메라 종료
               </button>
             </div>
-            {/* 다중 촬영 상태 표시 */}
-            <div id="multiCaptureStatus" class="hidden rounded-lg border border-purple-200 bg-purple-50 p-3">
-              <div class="flex items-center gap-2">
-                <div class="h-2 w-2 animate-pulse rounded-full bg-purple-600"></div>
-                <p id="multiCaptureText" class="text-xs font-semibold text-purple-900">준비 중...</p>
-              </div>
-              <div class="mt-2 flex gap-1">
-                <div id="captureIndicator1" class="h-2 w-1/4 rounded bg-slate-300"></div>
-                <div id="captureIndicator2" class="h-2 w-1/4 rounded bg-slate-300"></div>
-                <div id="captureIndicator3" class="h-2 w-1/4 rounded bg-slate-300"></div>
-                <div id="captureIndicator4" class="h-2 w-1/4 rounded bg-slate-300"></div>
-              </div>
-            </div>
             <div
               id="cameraContainer"
               class="hidden relative overflow-hidden rounded-xl border border-slate-200 bg-white/60"
             >
               <video id="cameraPreview" class="h-full w-full object-cover" playsInline muted></video>
-              {/* 80% ROI 가이드 오버레이 */}
               <div class="pointer-events-none absolute inset-0">
                 <div class="absolute inset-[10%] border-2 border-dashed border-emerald-400 bg-emerald-400/5">
                   <div class="absolute left-1/2 top-2 -translate-x-1/2 rounded bg-emerald-600 px-2 py-1 text-[10px] font-semibold text-white shadow-lg">
                     권장 촬영 영역 (80%)
                   </div>
-                  {/* 모서리 마커 */}
                   <div class="absolute left-0 top-0 h-4 w-4 border-l-4 border-t-4 border-emerald-500"></div>
                   <div class="absolute right-0 top-0 h-4 w-4 border-r-4 border-t-4 border-emerald-500"></div>
                   <div class="absolute bottom-0 left-0 h-4 w-4 border-b-4 border-l-4 border-emerald-500"></div>
@@ -346,9 +313,70 @@ const Home = () => (
               </div>
             </div>
             <p class="text-xs leading-relaxed text-slate-600">
-              💡 <strong>촬영 가이드:</strong> 카메라 활성화 시 화면에 표시되는 <span class="text-emerald-600 font-semibold">초록색 가이드 박스(80% 영역)</span> 안에 매쉬가 들어오도록 촬영하세요. 
+              카메라 활성화 시 화면에 표시되는 <span class="text-emerald-600 font-semibold">초록색 가이드 박스(80% 영역)</span> 안에 매쉬가 들어오도록 촬영하세요. 
               이렇게 하면 일관된 조건에서 청소율을 측정할 수 있습니다.
             </p>
+          </div>
+
+          {/* 하이라이트 제외 설정 (NEW v2) */}
+          <div class="mt-6 space-y-3 rounded-xl border border-amber-200 bg-amber-50/50 p-4">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-semibold text-amber-900">반사 하이라이트 자동 제외</h3>
+              <label class="relative inline-flex cursor-pointer items-center">
+                <input id="highlightToggle" type="checkbox" class="peer sr-only" checked />
+                <div class="peer h-5 w-9 rounded-full bg-slate-300 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:border after:border-slate-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-amber-500 peer-checked:after:translate-x-full peer-checked:after:border-white"></div>
+              </label>
+            </div>
+            <p class="text-xs text-slate-600">
+              촬영 시 발생하는 정반사(하이라이트) 영역을 자동으로 감지하여 분석 분모에서 제외합니다.
+              포화된 밝은 픽셀(밝기 &gt; 임계값)을 마스킹하고, 해당 영역의 구멍은 "제외됨"으로 분류합니다.
+            </p>
+            <div class="grid gap-3 sm:grid-cols-2">
+              <label class="flex flex-col gap-1 text-xs text-slate-600">
+                하이라이트 임계값 (밝기)
+                <input id="highlightThreshold" type="range" min="200" max="255" value="245" class="accent-amber-400" />
+                <span id="highlightThresholdValue" class="font-semibold text-amber-700">245</span>
+              </label>
+              <label class="flex flex-col gap-1 text-xs text-slate-600">
+                마스크 팽창 (px)
+                <input id="highlightDilate" type="range" min="0" max="15" value="5" class="accent-amber-400" />
+                <span id="highlightDilateValue" class="font-semibold text-amber-700">5</span>
+              </label>
+            </div>
+          </div>
+
+          {/* 품질 게이트 설정 */}
+          <div class="mt-6 space-y-3 rounded-xl border border-sky-200 bg-sky-50/50 p-4">
+            <h3 class="text-sm font-semibold text-sky-900">품질 게이트 설정</h3>
+            <p class="text-xs text-slate-600">
+              유효 분석 영역이 부족하거나 선명도가 낮으면 "재촬영 권장" 경고가 표시됩니다.
+            </p>
+            <label class="flex flex-col gap-1 text-xs text-slate-600">
+              최소 유효면적 (%)
+              <input id="validAreaMin" type="range" min="30" max="95" step="5" value="70" class="accent-sky-400" />
+              <span id="validAreaMinValue" class="font-semibold text-sky-700">70</span>
+            </label>
+          </div>
+
+          {/* ROI 그리드 프리셋 */}
+          <div class="mt-6 space-y-3 rounded-xl border border-purple-200 bg-purple-50/50 p-4">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-semibold text-purple-900">ROI 그리드 프리셋</h3>
+              <label class="relative inline-flex cursor-pointer items-center">
+                <input id="roiGridToggle" type="checkbox" class="peer sr-only" />
+                <div class="peer h-5 w-9 rounded-full bg-slate-300 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:border after:border-slate-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-purple-500 peer-checked:after:translate-x-full peer-checked:after:border-white"></div>
+              </label>
+            </div>
+            <p class="text-xs text-slate-600">
+              목표 구멍 수(N x M)를 설정하면, 검출된 구멍 수가 예상 범위에서 벗어날 때 경고합니다.
+            </p>
+            <select id="roiGridPreset" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900">
+              <option value="20x20">20 x 20 (400개)</option>
+              <option value="25x25">25 x 25 (625개)</option>
+              <option value="30x30">30 x 30 (900개)</option>
+              <option value="35x35">35 x 35 (1225개)</option>
+              <option value="40x40">40 x 40 (1600개)</option>
+            </select>
           </div>
 
           <div class="mt-6 grid gap-5 lg:grid-cols-2">
@@ -378,48 +406,50 @@ const Home = () => (
             </div>
             <div class="space-y-3">
               <h3 class="text-sm font-semibold text-slate-900">분석 로그</h3>
-              <p class="text-xs text-slate-600">이미지 전처리·분류 과정을 단계별로 기록합니다.</p>
+              <p class="text-xs text-slate-600">이미지 전처리/분류 과정을 단계별로 기록합니다.</p>
               <div
                 id="logPanel"
                 class="h-40 overflow-y-auto rounded-xl border border-slate-200 bg-white/40 p-3 text-xs text-slate-600"
               ></div>
             </div>
           </div>
-
-          <div class="mt-6 space-y-3 rounded-xl border border-slate-200 bg-white/40 p-4">
-            <h3 class="text-sm font-semibold text-slate-700">미검출 후보 처리</h3>
-            <p class="text-xs text-slate-600">
-              형광 초록색으로 표시된 미검출 후보 영역을 청소 완료(파란색 점)로 일괄 변환할 수 있습니다. 
-              이 기능은 임계값 조정만으로는 인식되지 않지만 육안으로 청소 완료로 판단되는 영역을 처리할 때 유용합니다.
-            </p>
-            <div class="flex items-center gap-3">
-              <label class="flex cursor-pointer items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="convertMissedToCleaned"
-                  class="h-4 w-4 cursor-pointer rounded border-slate-300 text-sky-600 focus:ring-2 focus:ring-sky-500 disabled:cursor-not-allowed"
-                  checked
-                  disabled
-                />
-                <span class="text-sm font-medium text-slate-700">미검출 후보를 청소 완료로 변환</span>
-              </label>
-            </div>
-            <p class="text-[11px] text-slate-500">
-              ⚠️ 이 기능을 활성화하면 형광 초록색 영역이 사라지고, 해당 위치에 파란색 점이 생성됩니다.
-            </p>
-          </div>
         </section>
         </div>
-        {/* 탭 1 끝 */}
 
         {/* 탭 2: 분석 결과 시각화 */}
         <div id="content-result" class="tab-content hidden">
         <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/40">
           <h2 class="text-lg font-semibold text-slate-900">2. 분석 결과 시각화</h2>
-          <p class="mt-1 text-sm text-slate-600">
-            원본 이미지 위에 분석 결과 오버레이를 겹쳐 표시합니다. 형광 초록색 영역은 아직 점으로
-            인식되지 않은 후보, 파란색 점은 청소 완료, 빨간색 점은 청소 필요를 의미합니다.
-          </p>
+          <div class="mt-1 flex items-center gap-3 flex-wrap">
+            <p class="text-sm text-slate-600">
+              원본 이미지 위에 분석 결과 오버레이를 겹쳐 표시합니다. 오렌지색 반투명 영역은 하이라이트 마스크(제외),
+              파란색 원은 청소 완료, 빨간색 원은 청소 필요를 의미합니다.
+            </p>
+            <span id="analysisModeBadge" class="hidden inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold bg-slate-100 text-slate-500 border border-slate-200 whitespace-nowrap"></span>
+          </div>
+
+          {/* 품질 게이트 상태 표시 */}
+          <div id="qualityGatePanel" class="mt-4 space-y-3 rounded-xl border border-slate-200 bg-white p-4">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-semibold text-slate-700">품질 게이트</h3>
+              <span id="qualityGateStatus" class="text-sm font-bold text-slate-500">—</span>
+            </div>
+            <ul id="qualityReasons" class="space-y-1"></ul>
+            <div class="grid grid-cols-3 gap-3 text-center">
+              <div class="rounded-lg bg-slate-50 p-2">
+                <p class="text-[10px] text-slate-600">선명도</p>
+                <p id="sharpnessDisplay" class="text-sm font-bold text-slate-900">—</p>
+              </div>
+              <div class="rounded-lg bg-slate-50 p-2">
+                <p class="text-[10px] text-slate-600">포화 비율</p>
+                <p id="saturationDisplay" class="text-sm font-bold text-slate-900">—</p>
+              </div>
+              <div class="rounded-lg bg-slate-50 p-2">
+                <p class="text-[10px] text-slate-600">유효 면적</p>
+                <p id="validAreaPercent" class="text-sm font-bold text-slate-900">—</p>
+              </div>
+            </div>
+          </div>
 
           <div class="mt-4 space-y-3 rounded-xl border border-slate-200 bg-emerald-50 p-4">
             <h3 class="text-sm font-semibold text-slate-700">검사 영역 지정 (ROI)</h3>
@@ -445,6 +475,10 @@ const Home = () => (
               </button>
               <span class="text-[11px] text-slate-600">ROI를 변경한 뒤에는 "분석 시작"을 다시 실행해 주세요.</span>
             </div>
+            <div class="mt-2 rounded-lg bg-slate-50 p-2">
+              <p class="text-[10px] text-slate-600">ROI 그리드 추정</p>
+              <p id="roiGridInfo" class="text-sm font-bold text-slate-900">—</p>
+            </div>
           </div>
 
           <div class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
@@ -460,42 +494,99 @@ const Home = () => (
                   class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/80 text-center text-sm text-slate-600"
                 >
                   <span class="text-base font-semibold text-slate-700">아직 이미지가 선택되지 않았습니다.</span>
-                  <span>이미지를 업로드한 뒤 “분석 시작” 버튼을 눌러 결과를 확인하세요.</span>
+                  <span>이미지를 업로드한 뒤 "분석 시작" 버튼을 눌러 결과를 확인하세요.</span>
                 </div>
               </div>
-              <div class="grid gap-3 sm:grid-cols-2">
-                <div class="rounded-xl border border-slate-200 bg-white/60 p-4 text-center">
-                  <p class="text-xs text-slate-600">총 검사 면적 (px²)</p>
-                  <p id="totalArea" class="mt-2 text-2xl font-bold text-slate-900">0</p>
+              {/* 오버레이 마킹만 보이는 이미지 */}
+              <div
+                id="overlayOnlyWrapper"
+                class="hidden relative w-full overflow-hidden rounded-2xl border border-slate-200 bg-white"
+              >
+                <h3 class="px-4 pt-3 text-sm font-semibold text-slate-700">오버레이 마킹 (흰 배경)</h3>
+                <p class="px-4 text-[11px] text-slate-500">원본 이미지를 제외한 마킹만 표시합니다. 구멍 위치와 상태를 명확하게 확인할 수 있습니다.</p>
+                <div class="p-3">
+                  <canvas id="overlayOnlyCanvas" class="block w-full rounded-xl border border-slate-100"></canvas>
                 </div>
-                <div class="rounded-xl border border-sky-400/40 bg-sky-500/10 p-4 text-center">
-                  <p class="text-xs text-sky-700">청소 완료 면적</p>
-                  <p id="cleanedArea" class="mt-2 text-2xl font-bold text-sky-300">0</p>
+              </div>
+
+              {/* 구멍/셀 단위 통계 */}
+              <div class="grid gap-3 sm:grid-cols-4">
+                <div class="rounded-xl border border-slate-200 bg-white/60 p-3 text-center">
+                  <p id="totalHolesLabel" class="text-[10px] text-slate-600">전체 구멍</p>
+                  <p id="totalHoles" class="mt-1 text-xl font-bold text-slate-900">—</p>
+                </div>
+                <div class="rounded-xl border border-sky-400/40 bg-sky-500/10 p-3 text-center">
+                  <p id="cleanedHolesLabel" class="text-[10px] text-sky-700">청소 완료</p>
+                  <p id="cleanedHoles" class="mt-1 text-xl font-bold text-sky-600">—</p>
+                </div>
+                <div class="rounded-xl border border-rose-400/40 bg-rose-500/10 p-3 text-center">
+                  <p id="blockedHolesLabel" class="text-[10px] text-rose-700">청소 필요</p>
+                  <p id="blockedHoles" class="mt-1 text-xl font-bold text-rose-600">—</p>
+                </div>
+                <div class="rounded-xl border border-amber-400/40 bg-amber-500/10 p-3 text-center">
+                  <p id="excludedHolesLabel" class="text-[10px] text-amber-700">제외(반사)</p>
+                  <p id="excludedHoles" class="mt-1 text-xl font-bold text-amber-600">—</p>
+                </div>
+              </div>
+              {/* 미세 매쉬 셀 밀도 정보 패널 (fine-mesh mode only, hidden by default) */}
+              <div id="fineMeshDensityPanel" class="hidden grid gap-3 sm:grid-cols-3">
+                <div class="rounded-xl border border-violet-300/50 bg-violet-50 p-3 text-center">
+                  <p class="text-[10px] text-violet-600">평균 밀도</p>
+                  <p id="avgDensityDisplay" class="mt-1 text-xl font-bold text-violet-700">—</p>
+                </div>
+                <div class="rounded-xl border border-violet-300/50 bg-violet-50 p-3 text-center">
+                  <p class="text-[10px] text-violet-600">FFT 피치</p>
+                  <p id="fftPitchDisplay" class="mt-1 text-xl font-bold text-violet-700">—</p>
+                </div>
+                <div class="rounded-xl border border-violet-300/50 bg-violet-50 p-3 text-center">
+                  <p class="text-[10px] text-violet-600">셀 수</p>
+                  <p id="totalCellsDisplay" class="mt-1 text-xl font-bold text-violet-700">—</p>
                 </div>
               </div>
             </div>
             <aside class="space-y-4">
               <div class="rounded-xl border border-slate-200 bg-white/50 p-5">
                 <h3 class="text-sm font-semibold text-slate-900">청소율</h3>
-                <p class="text-[11px] uppercase tracking-wide text-slate-600">면적 기준 (ROI 적용)</p>
-                <p class="mt-2 text-4xl font-black text-emerald-700" id="cleaningRate">0%</p>
+                <p class="text-[11px] uppercase tracking-wide text-slate-600">유효 구멍/셀 기준 (제외 영역 제외)</p>
+                <p class="mt-2 text-4xl font-black text-emerald-700" id="cleaningRateHole">—</p>
                 <p class="mt-2 text-xs text-slate-600">
-                  전체 면적 대비 파란색(청소 완료)으로 표시된 면적을 제외한 비율을 기반으로 계산됩니다. 수동 교정 및 ROI 재설정 시 즉시 갱신됩니다.
+                  하이라이트로 제외된 영역을 뺀 나머지 중 "청소 완료"의 비율입니다. 마스크가 인위적 개선을 방지합니다.
+                  미세 매쉬 모드에서는 셀 내 어두운 픽셀 밀도로 청소 상태를 판단합니다.
                 </p>
               </div>
               <div class="rounded-xl border border-slate-200 bg-white/50 p-5">
                 <h3 class="text-sm font-semibold text-slate-900">결과 내보내기</h3>
                 <p class="mt-2 text-xs text-slate-600">
-                  분석된 점들만 투명 배경에 표시한 이미지를 다운로드할 수 있습니다.
+                  분석 결과를 이미지, JSON, CSV 형식으로 내보낼 수 있습니다.
                 </p>
-                <button
-                  id="downloadOverlayButton"
-                  type="button"
-                  class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-sky-500 px-3 py-2 text-xs font-semibold text-sky-700 transition hover:bg-sky-50 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400"
-                  disabled
-                >
-                  점 위치 이미지 다운로드
-                </button>
+                <div class="mt-3 flex flex-col gap-2">
+                  <button
+                    id="downloadOverlayButton"
+                    type="button"
+                    class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-sky-500 px-3 py-2 text-xs font-semibold text-sky-700 transition hover:bg-sky-50 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400"
+                    disabled
+                  >
+                    오버레이 이미지 다운로드
+                  </button>
+                  <div class="grid grid-cols-2 gap-2">
+                    <button
+                      id="exportJsonButton"
+                      type="button"
+                      class="inline-flex items-center justify-center gap-1 rounded-lg border border-violet-500 px-3 py-2 text-xs font-semibold text-violet-700 transition hover:bg-violet-50 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400"
+                      disabled
+                    >
+                      JSON 내보내기
+                    </button>
+                    <button
+                      id="exportCsvButton"
+                      type="button"
+                      class="inline-flex items-center justify-center gap-1 rounded-lg border border-teal-500 px-3 py-2 text-xs font-semibold text-teal-700 transition hover:bg-teal-50 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400"
+                      disabled
+                    >
+                      CSV 내보내기
+                    </button>
+                  </div>
+                </div>
               </div>
               <div class="rounded-xl border border-emerald-200 bg-emerald-50/50 p-5">
                 <h3 class="text-sm font-semibold text-emerald-900">검사 결과 저장</h3>
@@ -508,10 +599,10 @@ const Home = () => (
                   class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 disabled:shadow-none"
                   disabled
                 >
-                  💾 검사 결과 저장
+                  검사 결과 저장
                 </button>
                 <p class="mt-2 text-[10px] text-slate-500">
-                  💡 팁: 자동 저장 후 수동 교정을 한 경우, 이 버튼으로 변경사항을 새 레코드로 저장할 수 있습니다.
+                  자동 저장 후 수동 교정을 한 경우, 이 버튼으로 변경사항을 새 레코드로 저장할 수 있습니다.
                 </p>
               </div>
 
@@ -519,7 +610,6 @@ const Home = () => (
           </div>
         </section>
         </div>
-        {/* 탭 2 끝 */}
 
         {/* 탭 3: 검사 이력 전체보기 */}
         <div id="content-history" class="tab-content hidden">
@@ -533,7 +623,6 @@ const Home = () => (
             </div>
           </section>
         </div>
-        {/* 탭 3 끝 */}
 
       </main>
 
@@ -541,13 +630,12 @@ const Home = () => (
         <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/40">
           <h2 class="text-lg font-semibold text-slate-900">분석 가이드</h2>
           <ul class="mt-4 space-y-3 text-sm text-slate-600">
-            <li>⚙️ 촬영 시 육각형 격자가 선명하게 보이도록 조명 각도를 맞춰 주세요.</li>
-            <li>🎯 매쉬 구멍은 일정 간격으로 배열되어 있으므로, 프레임 중앙이 잘리지 않도록 촬영합니다.</li>
-            <li>📷 모바일/태블릿에서는 “카메라 활성화 → 촬영” 버튼으로 즉시 이미지를 확보할 수 있습니다.</li>
-
-            <li>💡 형광 초록색으로 표시된 영역은 아직 점으로 인식되지 않은 후보 영역입니다. 임계값을 조정하거나 수동 교정을
-              고려하세요.</li>
-            <li>📝 분석 후 결과를 저장하면 이력 페이지에서 통계와 이미지를 다시 확인할 수 있습니다.</li>
+            <li>촬영 시 육각형 격자가 선명하게 보이도록 조명 각도를 맞춰 주세요.</li>
+            <li>매쉬 구멍은 일정 간격으로 배열되어 있으므로, 프레임 중앙이 잘리지 않도록 촬영합니다.</li>
+            <li>모바일/태블릿에서는 "카메라 활성화 → 촬영" 버튼으로 즉시 이미지를 확보할 수 있습니다.</li>
+            <li>반사(하이라이트)가 심한 영역은 자동으로 제외됩니다. 오렌지색 반투명 영역이 제외 마스크입니다.</li>
+            <li>품질 게이트가 "경고" 또는 "검사 불가"일 때는 재촬영을 권장합니다.</li>
+            <li>분석 후 결과를 저장하면 이력 페이지에서 통계와 이미지를 다시 확인할 수 있습니다.</li>
           </ul>
         </section>
         <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/40">
@@ -556,35 +644,29 @@ const Home = () => (
             <div class="flex items-center gap-3">
               <span class="h-3 w-3 rounded-full bg-sky-400"></span>
               <dt class="font-semibold text-slate-900">청소 완료</dt>
-              <dd class="text-xs text-slate-600">검정색으로 보이는 매쉬 구멍</dd>
+              <dd class="text-xs text-slate-600">검정색 구멍 / 밀도 &ge; 40%</dd>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="h-3 w-3 rounded-full bg-amber-400"></span>
+              <dt class="font-semibold text-slate-900">부분 청소</dt>
+              <dd class="text-xs text-slate-600">미세 매쉬 모드에서 밀도 15-40%</dd>
             </div>
             <div class="flex items-center gap-3">
               <span class="h-3 w-3 rounded-full bg-rose-400"></span>
               <dt class="font-semibold text-slate-900">청소 필요</dt>
-              <dd class="text-xs text-slate-600">회색으로 보이는 매쉬 구멍</dd>
-            </div>
-            {/* 노란색 격자 범례 제거 - 파란색/빨간색 점만 표시 */}
-            {/* <div class="flex items-center gap-3">
-              <span class="h-3 w-3 rounded-full bg-yellow-400"></span>
-              <dt class="font-semibold text-slate-900">제외 격자</dt>
-              <dd class="text-xs text-slate-600">육각형 철 구조(청소율 계산 제외)</dd>
-            </div> */}
-            <div class="flex items-center gap-3">
-              <span class="h-3 w-3 rounded-full bg-lime-300"></span>
-              <dt class="font-semibold text-slate-900">미검출 후보</dt>
-              <dd class="text-xs text-slate-600">아직 점으로 인식되지 않은 후보 영역(임계값 및 교정 필요)</dd>
+              <dd class="text-xs text-slate-600">회색 구멍 / 밀도 &lt; 15%</dd>
             </div>
             <div class="flex items-center gap-3">
-              <span class="h-3 w-3 rounded-full bg-purple-500"></span>
-              <dt class="font-semibold text-slate-900">가상 점 (보라색)</dt>
-              <dd class="text-xs text-slate-600">격자 패턴 상 존재해야 하지만 인식되지 않은 구멍</dd>
+              <span class="inline-flex h-3 w-3 rounded-full" style="background: rgba(255,140,0,0.7)"></span>
+              <dt class="font-semibold text-slate-900">제외됨 (반사)</dt>
+              <dd class="text-xs text-slate-600">하이라이트 마스크에 의해 분석에서 제외된 영역</dd>
             </div>
           </dl>
         </section>
       </aside>
     </div>
     <footer class="border-t border-slate-200 bg-slate-50 py-6 text-center text-xs text-slate-600">
-      ⓒ {new Date().getFullYear()} Mesh Cleanliness Inspector — Cloudflare Pages & Hono
+      Mesh Cleanliness Inspector v2 — Cloudflare Pages & Hono
     </footer>
     <script type="module" src="/static/app.js"></script>
   </div>
@@ -670,11 +752,11 @@ const HistoryRow = ({ record }: { record: HistoryRecord }) => (
     </td>
     <td class="whitespace-nowrap px-4 py-3 align-top text-sm text-slate-600">
       <div class="flex flex-col gap-1 text-xs text-slate-600">
-        <span>Dark ≤ {record.thresholds.dark}</span>
-        <span>Grey ≤ {record.thresholds.gray}</span>
+        <span>Dark &le; {record.thresholds.dark}</span>
+        <span>Grey &le; {record.thresholds.gray}</span>
         {typeof record.thresholds.areaPercentile === 'number' && (
           <span>
-            면적 ≥ P{record.thresholds.areaPercentile}
+            면적 &ge; P{record.thresholds.areaPercentile}
             <span class="text-slate-8000"> (상위 {Math.max(0, 100 - record.thresholds.areaPercentile)}%)</span>
           </span>
         )}
@@ -757,7 +839,7 @@ const HistoryPage = () => {
               <thead class="bg-white/80 text-xs uppercase tracking-wide text-slate-600">
                 <tr>
                   <th class="px-4 py-3 font-semibold">검사 제목 / 라인</th>
-                  <th class="px-4 py-3 font-semibold">검사 ID · 시각</th>
+                  <th class="px-4 py-3 font-semibold">검사 ID / 시각</th>
                   <th class="px-4 py-3 font-semibold">구멍 통계</th>
                   <th class="px-4 py-3 font-semibold">청소율</th>
                   <th class="px-4 py-3 font-semibold">임계값</th>
@@ -775,7 +857,7 @@ const HistoryPage = () => {
       </main>
 
       <footer class="border-t border-slate-200/60 bg-white/80 py-6 text-center text-xs text-slate-9000">
-        ⓒ {new Date().getFullYear()} Mesh Cleanliness Inspector — Cloudflare Pages & Hono
+        Mesh Cleanliness Inspector v2 — Cloudflare Pages & Hono
       </footer>
     </div>
   )
@@ -920,7 +1002,6 @@ app.get('/api/inspections/:id', async (c) => {
   }
 })
 
-// Update inspection endpoint
 app.put('/api/inspections/:id', async (c) => {
   try {
     const id = c.req.param('id')
