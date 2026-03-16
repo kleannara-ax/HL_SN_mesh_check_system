@@ -1,0 +1,12 @@
+dependencies {
+    implementation project(':core')
+}
+
+// 하위 모듈은 bootJar 생성하지 않음
+bootJar {
+    enabled = false
+}
+
+jar {
+    enabled = true
+}
