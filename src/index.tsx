@@ -40,17 +40,36 @@ const InspectionDetail = ({ inspection }: { inspection: any }) => (
     </div>
 
     <main class="mx-auto max-w-6xl space-y-6 px-4 py-10">
-      {/* 오버레이 이미지 */}
-      {inspection.overlay_image && (
+      {/* 원본 사진 & 오버레이 이미지 비교 */}
+      {(inspection.original_image || inspection.overlay_image) && (
         <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
-          <h2 class="text-lg font-semibold text-slate-900">분석 결과 시각화</h2>
-          <p class="mt-1 text-sm text-slate-600">저장된 오버레이 이미지를 확인할 수 있습니다.</p>
-          <div class="mt-4 overflow-hidden rounded-xl border border-slate-200">
-            <img
-              src={inspection.overlay_image}
-              alt="검사 결과 오버레이"
-              class="w-full"
-            />
+          <h2 class="text-lg font-semibold text-slate-900">검사 이미지</h2>
+          <p class="mt-1 text-sm text-slate-600">업로드한 원본 사진과 분석 결과를 비교할 수 있습니다.</p>
+          <div class={`mt-4 grid gap-4 ${inspection.original_image && inspection.overlay_image ? 'lg:grid-cols-2' : ''}`}>
+            {inspection.original_image && (
+              <div>
+                <h3 class="mb-2 text-sm font-semibold text-slate-700">원본 사진</h3>
+                <div class="overflow-hidden rounded-xl border border-slate-200">
+                  <img
+                    src={inspection.original_image}
+                    alt="업로드한 원본 사진"
+                    class="w-full"
+                  />
+                </div>
+              </div>
+            )}
+            {inspection.overlay_image && (
+              <div>
+                <h3 class="mb-2 text-sm font-semibold text-slate-700">분석 결과 오버레이</h3>
+                <div class="overflow-hidden rounded-xl border border-slate-200">
+                  <img
+                    src={inspection.overlay_image}
+                    alt="검사 결과 오버레이"
+                    class="w-full"
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </section>
       )}
@@ -786,7 +805,8 @@ app.post('/api/inspections', async (c) => {
       roiY,
       roiWidth,
       roiHeight,
-      virtualHolesCount
+      virtualHolesCount,
+      originalImage
     } = body
 
     const result = await c.env.DB.prepare(`
@@ -796,8 +816,8 @@ app.post('/api/inspections', async (c) => {
         cleaning_rate_area, cleaning_rate_count,
         threshold_dark, threshold_gray, threshold_area,
         manual_edits_count, roi_x, roi_y, roi_width, roi_height,
-        virtual_holes_count
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        virtual_holes_count, original_image
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       title,
       totalHoles,
@@ -817,7 +837,8 @@ app.post('/api/inspections', async (c) => {
       roiY,
       roiWidth,
       roiHeight,
-      virtualHolesCount
+      virtualHolesCount,
+      originalImage || null
     ).run()
 
     return c.json({
@@ -840,7 +861,14 @@ app.get('/api/inspections', async (c) => {
     const offset = parseInt(c.req.query('offset') || '0')
 
     const { results } = await c.env.DB.prepare(`
-      SELECT * FROM inspections
+      SELECT id, title, total_holes, cleaned_holes, blocked_holes,
+        total_area, cleaned_area, blocked_area, missed_area,
+        cleaning_rate_area, cleaning_rate_count,
+        threshold_dark, threshold_gray, threshold_area,
+        manual_edits_count, roi_x, roi_y, roi_width, roi_height,
+        virtual_holes_count, created_at, updated_at,
+        CASE WHEN original_image IS NOT NULL AND original_image != '' THEN 1 ELSE 0 END as has_original_image
+      FROM inspections
       ORDER BY created_at DESC
       LIMIT ? OFFSET ?
     `).bind(limit, offset).all()
@@ -918,7 +946,8 @@ app.put('/api/inspections/:id', async (c) => {
       roiWidth,
       roiHeight,
       virtualHolesCount,
-      overlayImage
+      overlayImage,
+      originalImage
     } = body
 
     const result = await c.env.DB.prepare(`
@@ -943,6 +972,7 @@ app.put('/api/inspections/:id', async (c) => {
         roi_height = ?,
         virtual_holes_count = ?,
         overlay_image = ?,
+        original_image = ?,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).bind(
@@ -966,6 +996,7 @@ app.put('/api/inspections/:id', async (c) => {
       roiHeight,
       virtualHolesCount,
       overlayImage,
+      originalImage || null,
       id
     ).run()
 

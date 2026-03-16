@@ -1,0 +1,21 @@
+// java-library 플러그인: api 의존성을 하위 모듈에 전이(transitive)시킴
+apply plugin: 'java-library'
+
+dependencies {
+    // api: 하위 모듈(module-approval, module-user 등)에서도 컴파일 시 사용 가능
+    api 'org.springframework.boot:spring-boot-starter-web'
+    api 'org.springframework.boot:spring-boot-starter-data-jpa'
+    api 'org.springframework.boot:spring-boot-starter-security'
+    api 'org.springframework.boot:spring-boot-starter-validation'
+
+    runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
+}
+
+// core는 독립 실행 가능한 boot jar
+bootJar {
+    enabled = true
+}
+
+jar {
+    enabled = true
+}

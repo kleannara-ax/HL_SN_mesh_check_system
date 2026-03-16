@@ -1999,6 +1999,19 @@ const getOverlayImageBase64 = () => {
   }
 }
 
+// 원본 이미지(meshCanvas)를 base64로 변환
+const getOriginalImageBase64 = () => {
+  const { meshCanvas } = elements
+  if (!meshCanvas) return null
+  
+  try {
+    return meshCanvas.toDataURL('image/jpeg', 0.8)
+  } catch (error) {
+    console.error('원본 이미지 변환 실패:', error)
+    return null
+  }
+}
+
 // 자동 저장 함수
 const autoSaveInspection = async () => {
   if (!state.results || !state.results.length) {
@@ -2007,6 +2020,7 @@ const autoSaveInspection = async () => {
   
   const metrics = state.metrics
   const overlayImage = getOverlayImageBase64()
+  const originalImage = getOriginalImageBase64()
   
   const data = {
     title: state.title || `검사_${formatTimestampLabel()}`,
@@ -2028,7 +2042,8 @@ const autoSaveInspection = async () => {
     roiWidth: state.roi?.width ?? null,
     roiHeight: state.roi?.height ?? null,
     virtualHolesCount: state.virtualHoles?.length ?? 0,
-    overlayImage: overlayImage
+    overlayImage: overlayImage,
+    originalImage: originalImage
   }
   
   try {
@@ -2714,7 +2729,8 @@ const setupEventListeners = () => {
       roiY: state.roi?.y || null,
       roiWidth: state.roi?.width || null,
       roiHeight: state.roi?.height || null,
-      virtualHolesCount: state.virtualHoles?.length || 0
+      virtualHolesCount: state.virtualHoles?.length || 0,
+      originalImage: getOriginalImageBase64()
     }
 
     try {
@@ -2817,7 +2833,10 @@ const loadInspectionHistory = async () => {
         <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 transition hover:border-emerald-500 hover:shadow-md">
           <div class="flex items-start justify-between">
             <div class="flex-1">
-              <h3 class="font-semibold text-slate-900">${inspection.title || '제목 없음'}</h3>
+              <div class="flex items-center gap-2">
+                <h3 class="font-semibold text-slate-900">${inspection.title || '제목 없음'}</h3>
+                ${inspection.has_original_image ? '<span class="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-semibold text-sky-700 border border-sky-200">📷 사진</span>' : ''}
+              </div>
               <p class="mt-1 text-xs text-slate-600">${new Date(inspection.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}</p>
             </div>
             <div class="text-right">
